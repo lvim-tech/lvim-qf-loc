@@ -41,16 +41,11 @@ M.list_fix = function(list)
 		d.nr = nil
 		list.items[i] = d
 	end
-	list.qfbufnr = nil
-	list.winid = nil
-	list.changedtick = nil
-	list.context = nil
-	list.id = nil
-	list.idx = nil
-	list.nr = nil
-	list.quickfixtextfunc = nil
-	list.size = nil
-	return list
+	local clear_list = {
+		title = list.title,
+		items = list.items,
+	}
+	return clear_list
 end
 
 M.list_to_json = function(list, id)
