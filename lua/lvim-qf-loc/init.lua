@@ -1,6 +1,6 @@
-local config = require("lvim-qf.config")
-local nav = require("lvim-qf.nav")
-local menu = require("lvim-qf.menu")
+local config = require("lvim-qf-loc.config")
+local nav = require("lvim-qf-loc.nav")
+local menu = require("lvim-qf-loc.menu")
 
 local M = {}
 

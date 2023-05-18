@@ -1,5 +1,5 @@
-local utils = require("lvim-qf.utils")
-local config = require("lvim-qf.config")
+local utils = require("lvim-qf-loc.utils")
+local config = require("lvim-qf-loc.config")
 local notify = require("lvim-ui-config.notify")
 local select = require("lvim-ui-config.select")
 
