@@ -43,7 +43,7 @@ M.quick_fix_load = function()
             vim.fn.setqflist({}, " ", local_qflists[i])
         end
     else
-        notify.error("There are no quickfix lists", {
+        notify.error("There are no saved quickfix lists", {
             title = "LVIM LIST",
         })
     end
@@ -87,7 +87,7 @@ M.loc_load = function()
             vim.fn.setloclist(0, {}, " ", local_loclists[i])
         end
     else
-        notify.error("There are no quickfix lists", {
+        notify.error("There are no saved loc lists", {
             title = "LVIM LIST",
         })
     end
