@@ -1,3 +1,3 @@
 return {
-	notify = true,
+    notify = true,
 }
