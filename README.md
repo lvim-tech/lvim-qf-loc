@@ -85,7 +85,7 @@ use({
 ## Commans
 
 ```lua
-:LvimFileManager
+:LvimListQuickFixNext
 :LvimListQuickFixPrev
 :LvimListLocNext
 :LvimListLocPrev
