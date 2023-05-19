@@ -10,6 +10,13 @@
 
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/lvim-tech/lvim-colorscheme/blob/main/LICENSE)
 
+## Screenshots
+
+![1](https://github.com/lvim-tech/lvim-qf-loc/assets/82431193/1f4fd211-9651-45ce-ad4a-783c795d1554)
+![2](https://github.com/lvim-tech/lvim-qf-loc/assets/82431193/233395cb-6504-45a3-9a17-27348ed7cce3)
+![3](https://github.com/lvim-tech/lvim-qf-loc/assets/82431193/363d7811-25fb-407e-8544-2b02a2b45857)
+
+
 ## Requirements
 
 -   [MunifTanjim/nui.nvim](https://github.com/MunifTanjim/nui.nvim)
@@ -80,5 +87,5 @@ use({
 :LvimListQuickFixMenuChoice
 :LvimListLocMenuChoice
 :LvimListQuickFixMenuDelete
-:LvimListLocMenuDelete"
+:LvimListLocMenuDelete
 ```
