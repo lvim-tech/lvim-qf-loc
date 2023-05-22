@@ -5,16 +5,12 @@ local M = {}
 
 config.is_active = false
 
-local group = vim.api.nvim_create_augroup("Lvimqfloc", {
-    clear = false,
-})
-
 local function compare_by_severity(a, b)
     local severities = { E = 1, W = 2, I = 3, N = 4 }
     return severities[a.type] < severities[b.type]
 end
 
-local diagnostics_reload = function()
+M.diagnostics_reload = function()
     local len = utils.length("quick_fix")
     for i = 1, len do
         local title = utils.title("quick_fix", i)
@@ -32,35 +28,11 @@ local diagnostics_reload = function()
     end
 end
 
-M.init = function()
-    vim.api.nvim_create_autocmd({
-        "DiagnosticChanged",
-        "DirChanged",
-    }, {
-        callback = function()
-            diagnostics_reload()
-        end,
-        group = group,
-    })
-    vim.api.nvim_create_autocmd({
-        "ExitPre",
-        "QuitPre",
-    }, {
-        callback = function()
-            local autocommands = vim.api.nvim_get_autocmds({
-                group = group,
-            })
-            vim.api.nvim_del_autocmd(autocommands[1]["id"])
-        end,
-        group = group,
-    })
-end
-
 M.qf_diagnostics = function()
     if config.is_active == false then
         config.is_active = true
         vim.diagnostic.setqflist()
-        diagnostics_reload()
+        M.diagnostics_reload()
     else
         local len = utils.length("quick_fix")
         local nr = 0
