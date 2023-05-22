@@ -9,6 +9,11 @@ local group = vim.api.nvim_create_augroup("Lvimqfloc", {
     clear = false,
 })
 
+local function compare_by_severity(a, b)
+    local severities = { E = 1, W = 2, I = 3, N = 4 }
+    return severities[a.type] < severities[b.type]
+end
+
 local diagnostics_reload = function()
     local len = utils.length("quick_fix")
     for i = 1, len do
@@ -16,6 +21,7 @@ local diagnostics_reload = function()
         if title == "Diagnostics" then
             local diags = vim.diagnostic.get()
             local qfdiags = vim.diagnostic.toqflist(diags)
+            table.sort(qfdiags, compare_by_severity)
             local qflist = vim.fn.getqflist({ nr = i, all = 1 })
             qflist["nr"] = i
             qflist["title"] = "Diagnostics"
@@ -54,6 +60,7 @@ M.qf_diagnostics = function()
     if config.is_active == false then
         config.is_active = true
         vim.diagnostic.setqflist()
+        diagnostics_reload()
     else
         local len = utils.length("quick_fix")
         local nr = 0
