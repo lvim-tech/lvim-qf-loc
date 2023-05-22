@@ -2,6 +2,7 @@ local config = require("lvim-qf-loc.config")
 local nav = require("lvim-qf-loc.nav")
 local menu = require("lvim-qf-loc.menu")
 local local_qf_loc = require("lvim-qf-loc.local_qf_loc")
+local diagnostics = require("lvim-qf-loc.diagnostics")
 
 local M = {}
 
@@ -10,6 +11,7 @@ M.setup = function(user_config)
         config = vim.tbl_deep_extend("force", config, user_config)
     end
     M.commands()
+    diagnostics.init()
 end
 
 M.commands = function()
@@ -48,6 +50,9 @@ M.commands = function()
     end, {})
     vim.api.nvim_create_user_command("LvimListLocLoad", function()
         local_qf_loc.loc_load()
+    end, {})
+    vim.api.nvim_create_user_command("LvimDiagnostics", function()
+        diagnostics.qf_diagnostics()
     end, {})
 end
 return M
