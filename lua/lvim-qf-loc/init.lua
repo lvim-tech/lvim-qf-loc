@@ -2,6 +2,7 @@ local config = require("lvim-qf-loc.config")
 local nav = require("lvim-qf-loc.nav")
 local menu = require("lvim-qf-loc.menu")
 local local_qf_loc = require("lvim-qf-loc.local_qf_loc")
+local autocmds = require("lvim-qf-loc.autocmds")
 local diagnostics = require("lvim-qf-loc.diagnostics")
 
 local M = {}
@@ -11,7 +12,7 @@ M.setup = function(user_config)
         config = vim.tbl_deep_extend("force", config, user_config)
     end
     M.commands()
-    diagnostics.init()
+    autocmds.init()
 end
 
 M.commands = function()
