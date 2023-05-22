@@ -106,6 +106,11 @@ M.quick_fix_menu_delete = function()
                 if i ~= values_choice[choice] then
                     local qf = utils.list_to_json("quick_fix", i)
                     table.insert(updated_qflists, qf)
+                else
+                    local title = utils.title("quick_fix", i)
+                    if title == "Diagnostics" or title == "Diagnostics (Current)" then
+                        config.is_active = false
+                    end
                 end
             end
             local update_len = utils.table_length(updated_qflists)
