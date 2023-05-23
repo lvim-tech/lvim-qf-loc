@@ -1,3 +1,4 @@
+local config = require("lvim-qf-loc.config")
 local diagnostics = require("lvim-qf-loc.diagnostics")
 
 local group = vim.api.nvim_create_augroup("Lvimqfloc", {
@@ -36,7 +37,7 @@ M.init = function()
     vim.api.nvim_create_autocmd("FileType", {
         pattern = "qf",
         callback = function()
-            qf_height(3, 20)
+            qf_height(config.min_height, config.max_height)
         end,
         group = group,
     })
