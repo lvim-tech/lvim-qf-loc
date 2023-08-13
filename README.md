@@ -31,21 +31,21 @@ Install the plugin with your preferred package manager:
 
 ```lua
 require("lazy").setup({
-  {
-    "lvim-tech/lvim-qf-loc",
-    dependencies = {
-      "MunifTanjim/nui.nvim",
-      "rcarriga/nvim-notify",
-      "lvim-tech/lvim-ui-config",
+    {
+        "lvim-tech/lvim-qf-loc",
+        dependencies = {
+            "MunifTanjim/nui.nvim",
+            "rcarriga/nvim-notify",
+            "lvim-tech/lvim-ui-config",
+        },
+        config = function()
+            require("lvim-qf-loc").setup({
+                -- your configuration comes here
+                -- or leave it empty to use the default settings
+                -- refer to the configuration section below
+            })
+        end,
     },
-    config = function()
-      require("lvim-qf-loc").setup({
-        -- your configuration comes here
-        -- or leave it empty to use the default settings
-        -- refer to the configuration section below
-      })
-    end,
-  },
 })
 ```
 
@@ -53,19 +53,19 @@ require("lazy").setup({
 
 ```lua
 use({
-  "lvim-tech/lvim-qf-loc",
-  requires = {
-    "MunifTanjim/nui.nvim",
-    "rcarriga/nvim-notify",
-    "lvim-tech/lvim-ui-config",
-  },
-  config = function()
-    require("lvim-qf-loc").setup({
-      -- your configuration comes here
-      -- or leave it empty to use the default settings
-      -- refer to the configuration section below
-    })
-  end,
+    "lvim-tech/lvim-qf-loc",
+    requires = {
+        "MunifTanjim/nui.nvim",
+        "rcarriga/nvim-notify",
+        "lvim-tech/lvim-ui-config",
+    },
+    config = function()
+        require("lvim-qf-loc").setup({
+            -- your configuration comes here
+            -- or leave it empty to use the default settings
+            -- refer to the configuration section below
+        })
+    end,
 })
 ```
 
@@ -82,14 +82,17 @@ use({
 ```lua
 :LvimListQuickFixNext
 :LvimListQuickFixPrev
+:LvimListQuickFixMenuChoice
+:LvimListQuickFixMenuDelete
+:LvimListQuickFixMenuSave
+:LvimListQuickFixMenuLoad
+
 :LvimListLocNext
 :LvimListLocPrev
-:LvimListQuickFixMenuChoice
 :LvimListLocMenuChoice
-:LvimListQuickFixMenuDelete
-:LvimListQuickFixSave
-:LvimListQuickFixLoad
-:LvimListLocSave
-:LvimListLocLoad
+:LvimListLocMenuDelete
+:LvimListLocMenuSave
+:LvimListLocMenuLoad
+
 :LvimDiagnostics
 ```

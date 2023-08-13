@@ -6,7 +6,7 @@ local select = require("lvim-ui-config.select")
 
 local M = {}
 
-M.quick_fix_save = function()
+M.quick_fix_menu_save = function()
     local len = utils.length("quick_fix")
     if config.notify and len < 1 then
         notify.error("There are no quickfix lists", {
@@ -35,7 +35,7 @@ M.quick_fix_save = function()
     end
 end
 
-M.quick_fix_load = function()
+M.quick_fix_menu_load = function()
     local local_qflists = utils.read_file(vim.fn.getcwd() .. "/.lvim_qf.json")
     if local_qflists ~= nil then
         local len = utils.table_length(local_qflists)
@@ -49,7 +49,7 @@ M.quick_fix_load = function()
     end
 end
 
-M.loc_save = function()
+M.loc_menu_save = function()
     local len = utils.length("loc")
     if config.notify and len < 1 then
         notify.error("There are no loc lists", {
@@ -78,7 +78,7 @@ M.loc_save = function()
     end
 end
 
-M.loc_load = function()
+M.loc_menu_load = function()
     local local_loclists = utils.read_file(vim.fn.getcwd() .. "/.lvim_loc.json")
     if local_loclists ~= nil then
         local len = utils.table_length(local_loclists)
