@@ -1,6 +1,5 @@
 local utils = require("lvim-qf-loc.utils")
 local config = require("lvim-qf-loc.config")
-local notify = require("lvim-ui-config.notify")
 local ui_config = require("lvim-ui-config.config")
 local select = require("lvim-ui-config.select")
 
@@ -9,7 +8,7 @@ local M = {}
 M.quick_fix_menu_save = function()
     local len = utils.length("quick_fix")
     if config.notify and len < 1 then
-        notify.error("There are no quickfix lists", {
+        vim.notify("There are no quickfix lists", vim.log.levels.ERROR, {
             title = "LVIM LIST",
         })
     else
@@ -20,9 +19,11 @@ M.quick_fix_menu_save = function()
         }, { prompt = "Save quickfix lists" }, {})
         select(opts, function(choice)
             if choice == "Show current path" then
-                notify.info(vim.inspect(vim.fn.getcwd()), {
-                    title = "LVIM LIST",
-                })
+                if config.notify then
+                    vim.notify(vim.inspect(vim.fn.getcwd()), vim.log.levels.INFO, {
+                        title = "LVIM LIST",
+                    })
+                end
             elseif choice == "Save" then
                 local qflists = {}
                 for i = 1, len do
@@ -43,16 +44,18 @@ M.quick_fix_menu_load = function()
             vim.fn.setqflist({}, " ", local_qflists[i])
         end
     else
-        notify.error("There are no saved quickfix lists", {
-            title = "LVIM LIST",
-        })
+        if config.notify then
+            vim.notify("There are no saved quickfix lists", vim.log.levels.ERROR, {
+                title = "LVIM LIST",
+            })
+        end
     end
 end
 
 M.loc_menu_save = function()
     local len = utils.length("loc")
     if config.notify and len < 1 then
-        notify.error("There are no loc lists", {
+        vim.notify("There are no loc lists", vim.log.levels.ERROR, {
             title = "LVIM LIST",
         })
     else
@@ -63,9 +66,11 @@ M.loc_menu_save = function()
         }, { prompt = "Save loc lists" }, {})
         select(opts, function(choice)
             if choice == "Show current path" then
-                notify.info(vim.inspect(vim.fn.getcwd()), {
-                    title = "LVIM LIST",
-                })
+                if config.notify then
+                    vim.notify(vim.inspect(vim.fn.getcwd()), vim.log.levels.INFO, {
+                        title = "LVIM LIST",
+                    })
+                end
             elseif choice == "Save" then
                 local loclists = {}
                 for i = 1, len do
@@ -86,9 +91,11 @@ M.loc_menu_load = function()
             vim.fn.setloclist(0, {}, " ", local_loclists[i])
         end
     else
-        notify.error("There are no saved loc lists", {
-            title = "LVIM LIST",
-        })
+        if config.notify then
+            vim.notify("There are no saved loc lists", vim.log.levels.ERROR, {
+                title = "LVIM LIST",
+            })
+        end
     end
 end
 

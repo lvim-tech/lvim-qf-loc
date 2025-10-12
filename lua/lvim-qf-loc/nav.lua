@@ -1,6 +1,5 @@
 local utils = require("lvim-qf-loc.utils")
 local config = require("lvim-qf-loc.config")
-local notify = require("lvim-ui-config.notify")
 
 local M = {}
 
@@ -10,13 +9,15 @@ M.quick_fix_next = function()
     if cur >= len then
         if config.notify and len >= 1 then
             vim.cmd("silent copen")
-            notify.error("This is the last quickfix list", {
+            vim.notify("This is the last quickfix list", vim.log.levels.ERROR, {
                 title = "LVIM LIST",
             })
         else
-            notify.error("There are no quickfix lists", {
-                title = "LVIM LIST",
-            })
+            if config.notify then
+                vim.notify("There are no quickfix lists", vim.log.levels.ERROR, {
+                    title = "LVIM LIST",
+                })
+            end
         end
     else
         vim.cmd("silent cnewer")
@@ -30,13 +31,15 @@ M.quick_fix_prev = function()
     if cur <= 1 then
         if config.notify and len >= 1 then
             vim.cmd("silent copen")
-            notify.error("This is the first quickfix list", {
+            vim.notify("This is the first quickfix list", vim.log.levels.ERROR, {
                 title = "LVIM LIST",
             })
         else
-            notify.error("There are no quickfix lists", {
-                title = "LVIM LIST",
-            })
+            if config.notify then
+                vim.notify("There are no quickfix lists", vim.log.levels.ERROR, {
+                    title = "LVIM LIST",
+                })
+            end
         end
     else
         vim.cmd("silent colder")
@@ -50,13 +53,15 @@ M.lock_next = function()
     if cur >= len then
         if config.notify and len >= 1 then
             vim.cmd("silent lopen")
-            notify.error("This is the last loc list", {
+            vim.notify("This is the last loc list", vim.log.levels.ERROR, {
                 title = "LVIM LIST",
             })
         else
-            notify.error("There are no loc lists", {
-                title = "LVIM LIST",
-            })
+            if config.notify then
+                vim.notify("There are no loc lists", vim.log.levels.ERROR, {
+                    title = "LVIM LIST",
+                })
+            end
         end
     else
         vim.cmd("silent lnewer")
@@ -70,13 +75,15 @@ M.lock_prev = function()
     if cur <= 1 then
         if config.notify and len >= 1 then
             vim.cmd("silent lopen")
-            notify.error("This is the first loc list", {
+            vim.notify("This is the first loc list", vim.log.levels.ERROR, {
                 title = "LVIM LIST",
             })
         else
-            notify.error("There are no loc lists", {
-                title = "LVIM LIST",
-            })
+            if config.notify then
+                vim.notify("There are no loc lists", vim.log.levels.ERROR, {
+                    title = "LVIM LIST",
+                })
+            end
         end
     else
         vim.cmd("silent lolder")
