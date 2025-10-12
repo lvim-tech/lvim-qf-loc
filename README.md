@@ -38,31 +38,13 @@ require("lazy").setup({
 })
 ```
 
-### [packer](https://github.com/wbthomason/packer.nvim)
-
-```lua
-use({
-    "lvim-tech/lvim-qf-loc",
-    requires = {
-        "MunifTanjim/nui.nvim",
-        "rcarriga/nvim-notify",
-        "lvim-tech/lvim-ui-config",
-    },
-    config = function()
-        require("lvim-qf-loc").setup({
-            -- your configuration comes here
-            -- or leave it empty to use the default settings
-            -- refer to the configuration section below
-        })
-    end,
-})
-```
-
 ## Default configuration
 
 ```lua
 {
-  notify = true,
+    notify = true,
+    min_height = 1,
+    max_height = 15,
 }
 ```
 
