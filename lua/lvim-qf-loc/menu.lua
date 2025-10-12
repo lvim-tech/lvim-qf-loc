@@ -6,7 +6,7 @@ local M = {}
 M.quick_fix_menu_choice = function()
     local len = utils.length("quick_fix")
     if config.notify and len < 1 then
-        vim.notify("There are no quickfix lists", vim.log.levels.ERROR, {
+        vim.notify("There are no quickfix lists", vim.log.levels.INFO, {
             title = "LVIM LIST",
         })
     else
@@ -43,7 +43,7 @@ end
 M.loc_menu_choice = function()
     local len = utils.length("loc")
     if config.notify and len < 1 then
-        vim.notify("There are no loc lists", vim.log.levels.ERROR, {
+        vim.notify("There are no loc lists", vim.log.levels.INFO, {
             title = "LVIM LIST",
         })
     else
@@ -80,7 +80,7 @@ end
 M.quick_fix_menu_delete = function()
     local len = utils.length("quick_fix")
     if config.notify and len < 1 then
-        vim.notify("There are no quickfix lists", vim.log.levels.ERROR, {
+        vim.notify("There are no quickfix lists", vim.log.levels.INFO, {
             title = "LVIM LIST",
         })
     else
@@ -126,7 +126,7 @@ end
 M.loc_menu_delete = function()
     local len = utils.length("loc")
     if config.notify and len < 1 then
-        vim.notify("There are no loc lists", vim.log.levels.ERROR, {
+        vim.notify("There are no loc lists", vim.log.levels.INFO, {
             title = "LVIM LIST",
         })
     else
