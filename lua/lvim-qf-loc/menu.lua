@@ -1,7 +1,5 @@
 local utils = require("lvim-qf-loc.utils")
 local config = require("lvim-qf-loc.config")
-local ui_config = require("lvim-ui-config.config")
-local select = require("lvim-ui-config.select")
 
 local M = {}
 
@@ -23,8 +21,10 @@ M.quick_fix_menu_choice = function()
             table.insert(values_preview, title)
             values_choice[title] = i
         end
-        local opts = ui_config.select(values_preview, { prompt = "Choice quickfix list" }, {})
-        select(opts, function(choice)
+        vim.ui.select(values_preview, { prompt = "Choose quickfix list" }, function(choice)
+            if not choice then
+                return
+            end
             local diff = values_choice[choice] - current_nr
             if diff > 0 then
                 for _ = 1, diff do
@@ -58,8 +58,10 @@ M.loc_menu_choice = function()
             table.insert(values_preview, title)
             values_choice[title] = i
         end
-        local opts = ui_config.select(values_preview, { prompt = "Choice loc list" }, {})
-        select(opts, function(choice)
+        vim.ui.select(values_preview, { prompt = "Choose loc list" }, function(choice)
+            if not choice then
+                return
+            end
             local diff = values_choice[choice] - current_nr
             if diff > 0 then
                 for _ = 1, diff do
@@ -93,8 +95,10 @@ M.quick_fix_menu_delete = function()
             table.insert(values_preview, title)
             values_choice[title] = i
         end
-        local opts = ui_config.select(values_preview, { prompt = "Delete quickfix list" }, {})
-        select(opts, function(choice)
+        vim.ui.select(values_preview, { prompt = "Delete quickfix list" }, function(choice)
+            if not choice then
+                return
+            end
             if values_choice[choice] == current_nr then
                 vim.cmd("silent cclose")
             end
@@ -137,8 +141,10 @@ M.loc_menu_delete = function()
             table.insert(values_preview, title)
             values_choice[title] = i
         end
-        local opts = ui_config.select(values_preview, { prompt = "Delete loc list" }, {})
-        select(opts, function(choice)
+        vim.ui.select(values_preview, { prompt = "Delete loc list" }, function(choice)
+            if not choice then
+                return
+            end
             if values_choice[choice] == current_nr then
                 vim.cmd("silent lclose")
             end

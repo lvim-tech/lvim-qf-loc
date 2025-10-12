@@ -1,7 +1,5 @@
 local utils = require("lvim-qf-loc.utils")
 local config = require("lvim-qf-loc.config")
-local ui_config = require("lvim-ui-config.config")
-local select = require("lvim-ui-config.select")
 
 local M = {}
 
@@ -12,12 +10,11 @@ M.quick_fix_menu_save = function()
             title = "LVIM LIST",
         })
     else
-        local opts = ui_config.select({
-            "Show current path",
-            "Save",
-            "Cancel",
-        }, { prompt = "Save quickfix lists" }, {})
-        select(opts, function(choice)
+        local choices = { "Show current path", "Save", "Cancel" }
+        vim.ui.select(choices, { prompt = "Save quickfix lists" }, function(choice)
+            if not choice then
+                return
+            end
             if choice == "Show current path" then
                 if config.notify then
                     vim.notify(vim.inspect(vim.fn.getcwd()), vim.log.levels.INFO, {
@@ -59,12 +56,11 @@ M.loc_menu_save = function()
             title = "LVIM LIST",
         })
     else
-        local opts = ui_config.select({
-            "Show current path",
-            "Save",
-            "Cancel",
-        }, { prompt = "Save loc lists" }, {})
-        select(opts, function(choice)
+        local choices = { "Show current path", "Save", "Cancel" }
+        vim.ui.select(choices, { prompt = "Save loc lists" }, function(choice)
+            if not choice then
+                return
+            end
             if choice == "Show current path" then
                 if config.notify then
                     vim.notify(vim.inspect(vim.fn.getcwd()), vim.log.levels.INFO, {
