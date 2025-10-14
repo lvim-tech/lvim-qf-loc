@@ -1,94 +1,111 @@
 local utils = require("lvim-qf-loc.utils")
-local config = require("lvim-qf-loc.config")
 
 local M = {}
+
+local function safe_fn(cmd)
+    pcall(function()
+        vim.cmd("silent " .. cmd)
+    end)
+end
+
+M.quick_fix_open = function()
+    if vim.tbl_isempty(vim.fn.getqflist()) then
+        utils.notify("No quickfix lists available")
+    else
+        safe_fn("copen")
+    end
+end
+
+M.quick_fix_close = function()
+    safe_fn("cclose")
+end
 
 M.quick_fix_next = function()
     local len = utils.length("quick_fix")
     local cur = utils.current("quick_fix")
-    if cur >= len then
-        if config.notify and len >= 1 then
-            vim.cmd("silent copen")
-            vim.notify("This is the last quickfix list", vim.log.levels.INFO, {
-                title = "LVIM LIST",
-            })
-        else
-            if config.notify then
-                vim.notify("There are no quickfix lists", vim.log.levels.INFO, {
-                    title = "LVIM LIST",
-                })
-            end
-        end
-    else
-        vim.cmd("silent cnewer")
-        vim.cmd("silent copen")
+
+    if len == 0 then
+        utils.notify("No quickfix lists available")
+        return
     end
+
+    if cur >= len then
+        utils.notify("Already at the last quickfix list")
+        safe_fn("copen")
+        return
+    end
+
+    vim.cmd("silent cnewer")
+    safe_fn("copen")
 end
 
 M.quick_fix_prev = function()
     local len = utils.length("quick_fix")
     local cur = utils.current("quick_fix")
+
+    if len == 0 then
+        utils.notify("No quickfix lists available")
+        return
+    end
+
     if cur <= 1 then
-        if config.notify and len >= 1 then
-            vim.cmd("silent copen")
-            vim.notify("This is the first quickfix list", vim.log.levels.INFO, {
-                title = "LVIM LIST",
-            })
-        else
-            if config.notify then
-                vim.notify("There are no quickfix lists", vim.log.levels.INFO, {
-                    title = "LVIM LIST",
-                })
-            end
-        end
+        utils.notify("Already at the first quickfix list")
+        safe_fn("copen")
+        return
+    end
+
+    vim.cmd("silent colder")
+    safe_fn("copen")
+end
+
+M.loc_list_open = function()
+    if vim.tbl_isempty(vim.fn.getloclist(0)) then
+        utils.notify("No location lists available")
     else
-        vim.cmd("silent colder")
-        vim.cmd("silent copen")
+        safe_fn("lopen")
     end
 end
 
-M.lock_next = function()
+M.loc_list_close = function()
+    safe_fn("lclose")
+end
+
+M.loc_list_next = function()
     local len = utils.length("loc")
     local cur = utils.current("loc")
+
+    if len == 0 then
+        utils.notify("No location lists available")
+        return
+    end
+
     if cur >= len then
-        if config.notify and len >= 1 then
-            vim.cmd("silent lopen")
-            vim.notify("This is the last loc list", vim.log.levels.INFO, {
-                title = "LVIM LIST",
-            })
-        else
-            if config.notify then
-                vim.notify("There are no loc lists", vim.log.levels.INFO, {
-                    title = "LVIM LIST",
-                })
-            end
-        end
-    else
-        vim.cmd("silent lnewer")
-        vim.cmd("silent lopen")
+        utils.notify("Already at the last location list")
+        safe_fn("lopen")
+        return
     end
+
+    vim.cmd("silent lnewer")
+    safe_fn("lopen")
 end
 
-M.lock_prev = function()
+M.loc_list_prev = function()
     local len = utils.length("loc")
     local cur = utils.current("loc")
-    if cur <= 1 then
-        if config.notify and len >= 1 then
-            vim.cmd("silent lopen")
-            vim.notify("This is the first loc list", vim.log.levels.INFO, {
-                title = "LVIM LIST",
-            })
-        else
-            if config.notify then
-                vim.notify("There are no loc lists", vim.log.levels.INFO, {
-                    title = "LVIM LIST",
-                })
-            end
-        end
-    else
-        vim.cmd("silent lolder")
-        vim.cmd("silent lopen")
+
+    if len == 0 then
+        utils.notify("No location lists available")
+        return
     end
+
+    if cur <= 1 then
+        utils.notify("Already at the first location list")
+        safe_fn("lopen")
+        return
+    end
+
+    vim.cmd("silent lolder")
+    safe_fn("lopen")
 end
 
 return M

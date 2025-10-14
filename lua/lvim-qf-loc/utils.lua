@@ -1,3 +1,5 @@
+local config = require("lvim-qf-loc.config")
+
 local M = {}
 
 M.table_length = function(tbl)
@@ -101,4 +103,11 @@ M.exists = function(name)
         return false
     end
 end
+
+M.notify = function(msg)
+    if config.notify then
+        vim.notify(msg, vim.log.levels.INFO, { title = "LVIM LIST" })
+    end
+end
+
 return M

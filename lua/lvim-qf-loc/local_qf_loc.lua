@@ -1,98 +1,62 @@
 local utils = require("lvim-qf-loc.utils")
-local config = require("lvim-qf-loc.config")
 
 local M = {}
 
-M.quick_fix_menu_save = function()
-    local len = utils.length("quick_fix")
-    if config.notify and len < 1 then
-        vim.notify("There are no quickfix lists", vim.log.levels.INFO, {
-            title = "LVIM LIST",
-        })
-    else
-        local choices = { "Show current path", "Save", "Cancel" }
-        vim.ui.select(choices, { prompt = "Save quickfix lists" }, function(choice)
-            if not choice then
-                return
-            end
-            if choice == "Show current path" then
-                if config.notify then
-                    vim.notify(vim.inspect(vim.fn.getcwd()), vim.log.levels.INFO, {
-                        title = "LVIM LIST",
-                    })
-                end
-            elseif choice == "Save" then
-                local qflists = {}
-                for i = 1, len do
-                    local qf = utils.list_to_json("quick_fix", i)
-                    table.insert(qflists, qf)
-                end
-                utils.write_file(vim.fn.getcwd() .. "/.lvim_qf.json", qflists)
-            end
-        end)
+local function save_lists(kind, filename)
+    local len = utils.length(kind)
+    if len < 1 then
+        utils.notify("There are no " .. kind .. " lists")
+        return
     end
+
+    local choices = { "Show current path", "Save", "Cancel" }
+    vim.ui.select(choices, { prompt = "Save " .. kind .. " lists" }, function(choice)
+        if not choice or choice == "Cancel" then
+            return
+        end
+
+        if choice == "Show current path" then
+            utils.notify(vim.fn.getcwd())
+        elseif choice == "Save" then
+            local data = {}
+            for i = 1, len do
+                local entry = utils.list_to_json(kind, i)
+                table.insert(data, entry)
+            end
+            utils.write_file(vim.fn.getcwd() .. "/" .. filename, data)
+            utils.notify("Saved " .. kind .. " lists to " .. filename)
+        end
+    end)
+end
+
+local function load_lists(kind, filename, setfn)
+    local data = utils.read_file(vim.fn.getcwd() .. "/" .. filename)
+    if not data then
+        utils.notify("There are no saved " .. kind .. " lists")
+        return
+    end
+
+    local len = utils.table_length(data)
+    for i = 1, len do
+        setfn(0, {}, " ", data[i])
+    end
+    utils.notify("Loaded " .. tostring(len) .. " " .. kind .. " list(s)")
+end
+
+M.quick_fix_menu_save = function()
+    save_lists("quick_fix", ".lvim_qf.json")
 end
 
 M.quick_fix_menu_load = function()
-    local local_qflists = utils.read_file(vim.fn.getcwd() .. "/.lvim_qf.json")
-    if local_qflists ~= nil then
-        local len = utils.table_length(local_qflists)
-        for i = 1, len do
-            vim.fn.setqflist({}, " ", local_qflists[i])
-        end
-    else
-        if config.notify then
-            vim.notify("There are no saved quickfix lists", vim.log.levels.INFO, {
-                title = "LVIM LIST",
-            })
-        end
-    end
+    load_lists("quick_fix", ".lvim_qf.json", vim.fn.setqflist)
 end
 
-M.loc_menu_save = function()
-    local len = utils.length("loc")
-    if config.notify and len < 1 then
-        vim.notify("There are no loc lists", vim.log.levels.INFO, {
-            title = "LVIM LIST",
-        })
-    else
-        local choices = { "Show current path", "Save", "Cancel" }
-        vim.ui.select(choices, { prompt = "Save loc lists" }, function(choice)
-            if not choice then
-                return
-            end
-            if choice == "Show current path" then
-                if config.notify then
-                    vim.notify(vim.inspect(vim.fn.getcwd()), vim.log.levels.INFO, {
-                        title = "LVIM LIST",
-                    })
-                end
-            elseif choice == "Save" then
-                local loclists = {}
-                for i = 1, len do
-                    local loc = utils.list_to_json("loc", i)
-                    table.insert(loclists, loc)
-                end
-                utils.write_file(vim.fn.getcwd() .. "/.lvim_loc.json", loclists)
-            end
-        end)
-    end
+M.loc_list_menu_save = function()
+    save_lists("loc", ".lvim_loc.json")
 end
 
-M.loc_menu_load = function()
-    local local_loclists = utils.read_file(vim.fn.getcwd() .. "/.lvim_loc.json")
-    if local_loclists ~= nil then
-        local len = utils.table_length(local_loclists)
-        for i = 1, len do
-            vim.fn.setloclist(0, {}, " ", local_loclists[i])
-        end
-    else
-        if config.notify then
-            vim.notify("There are no saved loc lists", vim.log.levels.INFO, {
-                title = "LVIM LIST",
-            })
-        end
-    end
+M.loc_list_menu_load = function()
+    load_lists("loc", ".lvim_loc.json", vim.fn.setloclist)
 end
 
 return M
