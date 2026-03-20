@@ -4,10 +4,10 @@ return {
     max_height = 15,
 
     tabs = {
-        navigate    = { icon = "󰜌" },
-        switch      = { icon = "󰒊" },
-        delete      = { icon = "󰆴" },
-        storage     = { icon = "󰆼" },
+        navigate = { icon = "󰜌" },
+        switch = { icon = "󰒊" },
+        delete = { icon = "󰆴" },
+        storage = { icon = "󰆼" },
         diagnostics = { icon = "󰋽" },
     },
 

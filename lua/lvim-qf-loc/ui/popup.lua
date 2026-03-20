@@ -16,10 +16,14 @@ local M = {}
 -- ── helpers ────────────────────────────────────────────────────────────────
 
 local function action(label, fn)
-    return { type = "action", label = label, run = function(_, close)
-        fn()
-        close(false, nil)
-    end }
+    return {
+        type = "action",
+        label = label,
+        run = function(_, close)
+            fn()
+            close(false, nil)
+        end,
+    }
 end
 
 local function spacer()
@@ -34,11 +38,11 @@ local function nav_tab(kind)
         label = "Navigate",
         icon = tab_icon("navigate"),
         rows = {
-            action("Open",     is_qf and nav.quick_fix_open  or nav.loc_list_open),
-            action("Close",    is_qf and nav.quick_fix_close or nav.loc_list_close),
+            action("Open", is_qf and nav.quick_fix_open or nav.loc_list_open),
+            action("Close", is_qf and nav.quick_fix_close or nav.loc_list_close),
             spacer(),
-            action("Next",     is_qf and nav.quick_fix_next  or nav.loc_list_next),
-            action("Previous", is_qf and nav.quick_fix_prev  or nav.loc_list_prev),
+            action("Next", is_qf and nav.quick_fix_next or nav.loc_list_next),
+            action("Previous", is_qf and nav.quick_fix_prev or nav.loc_list_prev),
         },
     }
 end
@@ -57,12 +61,16 @@ local function choice_tab(kind)
             run = function(_, close)
                 local newer = kind == "quick_fix" and "cnewer" or "lnewer"
                 local older = kind == "quick_fix" and "colder" or "lolder"
-                local open  = kind == "quick_fix" and "copen"  or "lopen"
+                local open = kind == "quick_fix" and "copen" or "lopen"
                 local diff = idx - current_nr
                 if diff > 0 then
-                    for _ = 1, diff do vim.cmd("silent " .. newer) end
+                    for _ = 1, diff do
+                        vim.cmd("silent " .. newer)
+                    end
                 elseif diff < 0 then
-                    for _ = 1, -diff do vim.cmd("silent " .. older) end
+                    for _ = 1, -diff do
+                        vim.cmd("silent " .. older)
+                    end
                 end
                 vim.cmd("silent " .. open)
                 utils.notify("Switched to: " .. title)
@@ -101,10 +109,14 @@ local function delete_tab(kind)
                 end
                 if kind == "quick_fix" then
                     vim.fn.setqflist({}, "f")
-                    for _, qf in ipairs(updated) do vim.fn.setqflist({}, " ", qf) end
+                    for _, qf in ipairs(updated) do
+                        vim.fn.setqflist({}, " ", qf)
+                    end
                 else
                     vim.fn.setloclist(0, {}, "f")
-                    for _, loc in ipairs(updated) do vim.fn.setloclist(0, {}, " ", loc) end
+                    for _, loc in ipairs(updated) do
+                        vim.fn.setloclist(0, {}, " ", loc)
+                    end
                 end
                 utils.notify("Deleted: " .. title)
                 close(false, nil)
@@ -184,11 +196,13 @@ end
 
 local function open(kind, tab_selector)
     local instance = require("lvim-qf-loc.ui").get()
-    if not instance then return end
+    if not instance then
+        return
+    end
 
     local filename = kind == "quick_fix" and ".lvim_qf.json" or ".lvim_loc.json"
-    local setfn    = kind == "quick_fix" and vim.fn.setqflist or vim.fn.setloclist
-    local title    = kind == "quick_fix" and "Quickfix" or "Location"
+    local setfn = kind == "quick_fix" and vim.fn.setqflist or vim.fn.setloclist
+    local title = kind == "quick_fix" and "Quickfix" or "Location"
 
     local tabs = {
         nav_tab(kind),
@@ -208,7 +222,11 @@ local function open(kind, tab_selector)
     })
 end
 
-M.open_qf  = function(tab_selector) open("quick_fix", tab_selector) end
-M.open_loc = function(tab_selector) open("loc", tab_selector) end
+M.open_qf = function(tab_selector)
+    open("quick_fix", tab_selector)
+end
+M.open_loc = function(tab_selector)
+    open("loc", tab_selector)
+end
 
 return M
