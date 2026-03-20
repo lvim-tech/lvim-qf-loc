@@ -1,6 +1,6 @@
-local config = require("lvim-qf-loc.config")
-
 local M = {}
+
+M.notify = require("lvim-qf-loc.utils.notify")
 
 M.table_length = function(tbl)
     local count = 0
@@ -83,30 +83,6 @@ M.write_file = function(file, content)
         end
         f:write(content)
         f:close()
-    end
-end
-
-M.delete_file = function(f)
-    os.remove(f)
-end
-
-M.create_dir = function(dirname)
-    os.execute("mkdir " .. dirname)
-end
-
-M.exists = function(name)
-    local f = io.open(name, "r")
-    if f ~= nil then
-        io.close(f)
-        return true
-    else
-        return false
-    end
-end
-
-M.notify = function(msg)
-    if config.notify then
-        vim.notify(msg, vim.log.levels.INFO, { title = "LVIM LIST" })
     end
 end
 

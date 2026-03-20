@@ -1,5 +1,5 @@
 local config = require("lvim-qf-loc.config")
-local diagnostics = require("lvim-qf-loc.diagnostics")
+local diagnostics = require("lvim-qf-loc.core.diagnostics")
 
 local group = vim.api.nvim_create_augroup("Lvimqfloc", {
     clear = false,
