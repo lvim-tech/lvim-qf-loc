@@ -26,26 +26,23 @@
 {
     "lvim-tech/lvim-qf-loc",
     dependencies = {
-        "lvim-tech/lvim-utils", -- optional
+        "lvim-tech/lvim-utils",
     },
     config = function()
-        require("lvim-qf-loc").setup({
-            -- your configuration comes here
-            -- or leave it empty to use the default settings
-        })
+        require("lvim-qf-loc").setup({ ... })
     end,
 }
 ```
 
-### 2. Native (`vim.pack` — Neovim 0.11+)
+### Native (vim.pack / packadd)
 
 ```lua
 vim.pack.add({
-    { src = "https://github.com/lvim-tech/lvim-utils" }, -- optional
+    { src = "https://github.com/lvim-tech/lvim-utils" },
     { src = "https://github.com/lvim-tech/lvim-qf-loc" },
 })
 
-require("lvim-qf-loc").setup({})
+require("lvim-qf-loc").setup({ ... })
 ```
 
 ### 3. [Packer](https://github.com/wbthomason/packer.nvim)
@@ -54,13 +51,10 @@ require("lvim-qf-loc").setup({})
 use({
     "lvim-tech/lvim-qf-loc",
     requires = {
-        { "lvim-tech/lvim-utils", opt = true }, -- optional
+        { "lvim-tech/lvim-utils" },
     },
     config = function()
-        require("lvim-qf-loc").setup({
-            -- your configuration comes here
-            -- or leave it empty to use the default settings
-        })
+        require("lvim-qf-loc").setup({ ... })
     end,
 })
 ```
@@ -71,22 +65,22 @@ Two commands with tab-completion for subcommands:
 
 ### `:LvimQf [subcommand]`
 
-| Subcommand    | Description                              |
-|---------------|------------------------------------------|
-| `navigate`    | Open / Close / Next / Previous           |
-| `switch`      | Switch to a different quickfix list      |
-| `delete`      | Delete a quickfix list                   |
-| `storage`     | Save / Load lists to/from JSON           |
-| `diagnostics` | Load diagnostics into quickfix           |
+| Subcommand    | Description                         |
+| ------------- | ----------------------------------- |
+| `navigate`    | Open / Close / Next / Previous      |
+| `switch`      | Switch to a different quickfix list |
+| `delete`      | Delete a quickfix list              |
+| `storage`     | Save / Load lists to/from JSON      |
+| `diagnostics` | Load diagnostics into quickfix      |
 
 ### `:LvimLoc [subcommand]`
 
-| Subcommand | Description                            |
-|------------|----------------------------------------|
-| `navigate` | Open / Close / Next / Previous         |
-| `switch`   | Switch to a different location list    |
-| `delete`   | Delete a location list                 |
-| `storage`  | Save / Load lists to/from JSON         |
+| Subcommand | Description                         |
+| ---------- | ----------------------------------- |
+| `navigate` | Open / Close / Next / Previous      |
+| `switch`   | Switch to a different location list |
+| `delete`   | Delete a location list              |
+| `storage`  | Save / Load lists to/from JSON      |
 
 Running the command **without a subcommand** opens the popup on the first tab.
 Running it **with a subcommand** opens the popup with that tab active.
@@ -95,25 +89,25 @@ Running it **with a subcommand** opens the popup with that tab active.
 
 ```lua
 require("lvim-qf-loc").setup({
-    notify     = true,
+    notify = true,
     min_height = 1,
     max_height = 15,
 
     -- Icons shown on each popup tab (requires a Nerd Font)
     tabs = {
-        navigate    = { icon = "󰜌" },
-        switch      = { icon = "󰒊" },
-        delete      = { icon = "󰆴" },
-        storage     = { icon = "󰆼" },
+        navigate = { icon = "󰜌" },
+        switch = { icon = "󰒊" },
+        delete = { icon = "󰆴" },
+        storage = { icon = "󰆼" },
         diagnostics = { icon = "󰋽" },
     },
 
     -- Passed directly to lvim-utils ui.new() — overrides border, size, keys, icons, highlights, etc.
     popup_global = {
-        border   = { "", "", "", " ", " ", " ", " ", " " },
+        border = { "", "", "", " ", " ", " ", " ", " " },
         position = "editor",
-        width    = 0.8,
-        height   = 0.8,
+        width = 0.8,
+        height = 0.8,
 
         icons = {
             action = "",
@@ -121,12 +115,12 @@ require("lvim-qf-loc").setup({
         },
 
         keys = {
-            down    = "j",
-            up      = "k",
+            down = "j",
+            up = "k",
             confirm = "<CR>",
-            cancel  = "<Esc>",
-            close   = "q",
-            tabs    = { next = "l", prev = "h" },
+            cancel = "<Esc>",
+            close = "q",
+            tabs = { next = "l", prev = "h" },
         },
 
         highlights = {},
