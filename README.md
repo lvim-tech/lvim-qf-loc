@@ -1,6 +1,15 @@
 # LVIM QF AND LOC
 
-## Improvements for neovim quickfix and location
+Improvements for Neovim's quickfix and location lists — a floating, tabbed UI to
+navigate, switch, delete and persist lists, plus load diagnostics into the quickfix.
+Powered by [lvim-utils](https://github.com/lvim-tech/lvim-utils) (optional, falls back
+gracefully).
+
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://github.com/lvim-tech/lvim-qf-loc/blob/main/LICENSE)
+
+![lvim-logo](https://user-images.githubusercontent.com/82431193/115121988-3bc06800-9fbe-11eb-8dab-19f624aa7b93.png)
+
+## Features
 
 - Navigation (prev / next) via floating popup
 - Switch between quickfix / location lists
@@ -8,10 +17,6 @@
 - Save and load lists to/from JSON file
 - Diagnostics in quickfix
 - Floating tabbed UI powered by [lvim-utils](https://github.com/lvim-tech/lvim-utils) (optional, falls back gracefully)
-
-![lvim-logo](https://user-images.githubusercontent.com/82431193/115121988-3bc06800-9fbe-11eb-8dab-19f624aa7b93.png)
-
-[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/lvim-tech/lvim-colorscheme/blob/main/LICENSE)
 
 ## Requirements
 
