@@ -9,6 +9,11 @@ local M = {}
 
 local qf_height = function(minheight, maxheight)
     local height = math.max(math.min(vim.fn.line("$"), maxheight), minheight)
+    -- the native editable view adds a top winbar that consumes one window row, so reserve it — otherwise the
+    -- last entry is pushed below the fold and needs scrolling even though the height was meant to fit them all
+    if config.view == "native" and config.edit.enabled then
+        height = height + 1
+    end
     vim.cmd(height .. "wincmd _")
 end
 
