@@ -28,22 +28,19 @@ local function severity(t)
     return map[t] or map.default, hl or "Special"
 end
 
---- The raw list (quickfix or a window's location list) + whether it currently looks diagnostic-sourced.
+--- The raw list (quickfix or a window's location list) as browser items.
 ---@param loclist_win integer?  a window handle → that window's location list; nil → the quickfix list
----@return table[] items, boolean has_severity
+---@return table[] items
 local function build_items(loclist_win)
     local raw = loclist_win and vim.fn.getloclist(loclist_win, { items = 0, idx = 0 }).items
         or vim.fn.getqflist({ items = 0 }).items
-    local items, has_severity = {}, false
+    local items = {}
     for _, e in ipairs(raw or {}) do
         local path = (e.bufnr and e.bufnr > 0 and vim.api.nvim_buf_is_valid(e.bufnr))
                 and vim.api.nvim_buf_get_name(e.bufnr)
             or ""
         if path ~= "" then
             local icon, icon_hl = severity(e.type or "")
-            if (e.type or "") ~= "" then
-                has_severity = true
-            end
             local short = vim.fn.fnamemodify(path, ":~:.")
             local msg = (e.text or ""):gsub("^%s+", ""):gsub("[\r\n]+", " ")
             items[#items + 1] = {
@@ -59,7 +56,7 @@ local function build_items(loclist_win)
             }
         end
     end
-    return items, has_severity
+    return items
 end
 
 --- Jump to an entry and centre it. `nvim_win_set_buf` (not `:edit`) so an unsaved editable preview can't block
@@ -76,23 +73,6 @@ local function jump(it)
     vim.cmd("normal! zz")
 end
 
---- A severity filter button for the header bar (keeps only entries of `t`).
----@param id string
----@param label string
----@param t string
----@param key string
----@return table
-local function severity_button(id, label, t, key)
-    return {
-        id = id,
-        label = label,
-        key = key,
-        predicate = function(it)
-            return it.type == t
-        end,
-    }
-end
-
 --- Open the browser. `loclist_win` = a window handle for that window's location list, or nil for the quickfix
 --- list. `layout` = "area" (default) | "float" | "bottom".
 ---@param loclist_win integer?
@@ -103,28 +83,10 @@ function M.open(loclist_win, layout)
         require("lvim-qf-loc.utils.notify")("lvim-utils is required for the browser.", vim.log.levels.WARN)
         return
     end
-    local items, has_severity = build_items(loclist_win)
+    local items = build_items(loclist_win)
     if #items == 0 then
         require("lvim-qf-loc.utils.notify")("List is empty.", vim.log.levels.INFO)
         return
-    end
-
-    -- the severity filter bar only when the list actually carries severities (diagnostic-sourced)
-    local filters
-    if has_severity then
-        filters = {
-            {
-                id = "severity",
-                active = "all",
-                buttons = {
-                    { id = "all", label = "All", key = "a" },
-                    severity_button("error", "Error", "E", "e"),
-                    severity_button("warn", "Warn", "W", "w"),
-                    severity_button("info", "Info", "I", "i"),
-                    severity_button("hint", "Hint", "H", "n"),
-                },
-            },
-        }
     end
 
     picker.open({
@@ -135,11 +97,12 @@ function M.open(loclist_win, layout)
             return it.text
         end,
         preview_file = true, -- the REAL file buffer in the preview (the bqf feature) — no FFI / magicwin
+        preview_side = config.browser.preview_side, -- "above" → preview on top, list full-width below
+        preview_heights = config.browser.height, -- { horizontal, vertical } area heights per stack direction
         subtitle = function(it)
             return vim.fn.fnamemodify(it.path, ":t")
         end,
         on_confirm = jump,
-        filters = filters,
     })
 end
 

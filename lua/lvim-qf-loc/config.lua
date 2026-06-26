@@ -65,6 +65,18 @@ return {
     -- area, with a severity icon per entry. `layout` = "area" | "float" | "bottom".
     browser = {
         layout = "area",
+        -- Where the editable file PREVIEW sits relative to the entry list: "above" (default — preview on top,
+        -- the list spans the FULL width below so long paths + messages stay readable) | "below" | "right" |
+        -- "left". The preview is the real file buffer (editable); enter it with the panel-nav keys to edit.
+        -- `<C-n>` / `<C-p>` rotate it through the four sides live.
+        preview_side = "above",
+        -- The area's height for each stack direction: `horizontal` when the preview is left/right (side-by-side),
+        -- `vertical` when it is above/below (stacked — usually taller, so both panels get room). A value ≤ 1 is a
+        -- fraction of the screen height; > 1 an absolute row count.
+        height = {
+            horizontal = 0.33,
+            vertical = 0.66,
+        },
         -- entry `type` → its leading icon (E/W/I/N/H from diagnostic-sourced lists; `default` for plain rows).
         icons = {
             E = "󰅚 ",
