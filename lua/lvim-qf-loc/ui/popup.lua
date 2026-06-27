@@ -218,6 +218,7 @@ local function open(kind, tab_selector)
         title = title,
         tab_selector = tab_selector,
         tabs = tabs,
+        menu = true, -- every tab is a navigable MENU: its action rows are a selectable BODY list, not footer chips
         callback = function() end,
     })
 end
