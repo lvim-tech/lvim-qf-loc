@@ -7,7 +7,8 @@
 -- the edits with full guards: every entry is verified to still match its source line on disk (external change →
 -- skipped, not corrupted), conflicting edits to one line are reported, every buffer op is pcall'd, and the
 -- changed files are saved per the autosave policy. No line-count changes (one row = one source line), so edits
--- never drift.
+-- never drift. A plain FILE list (position-less, no descriptions) instead makes each row the file's PATH —
+-- editing it on `:w` RENAMES / MOVES the file (creates parent dirs, never overwrites, follows an open buffer).
 --
 ---@module "lvim-qf-loc.qf.edit"
 
@@ -73,6 +74,34 @@ local function description_text(e)
     return txt
 end
 
+--- For a FILE-list entry, the editable buffer text = its PATH relative to cwd (`~` for paths outside it).
+--- Editing this path on `:w` renames / moves the file (see `apply_renames`).
+---@param e table
+---@return string
+local function path_text(e)
+    local name = (e.bufnr and e.bufnr > 0 and api.nvim_buf_is_valid(e.bufnr)) and api.nvim_buf_get_name(e.bufnr) or ""
+    if name == "" then
+        return " "
+    end
+    return vim.fn.fnamemodify(name, ":~:.")
+end
+
+--- A FILE list: position-less AND no entry carries a description beyond its path — so each row is simply a file
+--- and its editable text is the PATH itself (→ rename / move on write), not a source line or a description.
+---@param items table[]
+---@return boolean
+local function list_is_files(items)
+    if #items == 0 or list_positioned(items) then
+        return false
+    end
+    for _, e in ipairs(items) do
+        if e.valid ~= 0 and description_text(e) ~= " " then
+            return false -- a real description → keep the description view, not a rename list
+        end
+    end
+    return true
+end
+
 --- `quickfixtextfunc`: render each entry's row. Positioned list → the entry's SOURCE LINE (the editable text);
 --- position-less list → an optional description (the `ordinal │ file` rows have no editable source). vim calls
 --- this to fill the qf buffer; the `file:lnum` prefix is added as virtual text afterwards (setup_buffer).
@@ -83,13 +112,14 @@ function M.textfunc(info)
         or vim.fn.getloclist(info.winid, { id = info.id, items = 0 })
     local items = what.items or {}
     local positioned = list_positioned(items)
+    local files = list_is_files(items)
     local cache = filecache.new()
     local out = {}
     for i = info.start_idx, info.end_idx do
         local e = items[i] or {}
-        local txt = positioned and source_text(e, cache) or description_text(e)
-        -- a SPACE, never "" — vim falls back to its default `file|lnum col| text` for an empty row, which is
-        -- exactly what surfaces on a BLANK source line (e.g. a context row over an empty line).
+        -- positioned → the editable SOURCE LINE; a plain file list → the editable PATH (rename); else a
+        -- description. A SPACE, never "" — vim falls back to its default `file|lnum col| text` for an empty row.
+        local txt = (positioned and source_text(e, cache)) or (files and path_text(e)) or description_text(e)
         out[#out + 1] = (txt ~= "") and txt or " "
     end
     return out
@@ -157,10 +187,15 @@ end
 ---@param mid_width integer
 ---@param has_sev boolean  the list carries severities → reserve an icon column
 ---@param positioned boolean  the list points at file lines (→ the line/col column); else just `ordinal │ file`
+---@param files boolean  a plain FILE list — the path is the editable buffer text, so draw NO filename prefix
 ---@return table[]
-local function prefix_chunks(e, col_width, mid_width, has_sev, positioned)
+local function prefix_chunks(e, col_width, mid_width, has_sev, positioned, files)
     local sep = config.edit.separator
-    -- a POSITION-LESS list (a plain file list): a single filename column; any description is the buffer text.
+    -- A FILE list: the PATH is the editable buffer text — no virtual filename column (it would duplicate it).
+    if files then
+        return {}
+    end
+    -- a POSITION-LESS list with descriptions: a single filename column; the description is the buffer text.
     -- (vim marks no-lnum entries `valid = 0`; in a position-less list that is NOT a context row — context only
     -- exists in a positioned list.)
     if not positioned then
@@ -377,6 +412,7 @@ local function decorate(qbuf, loclist_win)
     -- list-wide column widths + whether the list carries severities (→ icon column) / file positions (→ the
     -- line/col column + context); position-less lists drop the line/col column entirely
     local positioned = list_positioned(items)
+    local files = list_is_files(items)
     local col_width, mid_width, has_sev = 0, 1, false
     for _, e in ipairs(items) do
         if (e.type or "") ~= "" then
@@ -395,7 +431,7 @@ local function decorate(qbuf, loclist_win)
         if i <= n then
             local line = api.nvim_buf_get_lines(qbuf, i - 1, i, false)[1] or ""
             local ok, id = pcall(api.nvim_buf_set_extmark, qbuf, NS, i - 1, 0, {
-                virt_text = prefix_chunks(e, col_width, mid_width, has_sev, positioned),
+                virt_text = prefix_chunks(e, col_width, mid_width, has_sev, positioned, files),
                 virt_text_pos = "inline",
                 right_gravity = false,
             })
@@ -404,6 +440,13 @@ local function decorate(qbuf, loclist_win)
                         and api.nvim_buf_get_name(e.bufnr)
                     or ""
                 map[id] = { path = path, lnum = e.lnum or 0, col = e.col, bufnr = e.bufnr, orig = line, entry = e }
+                -- colour the editable PATH like a filename (no source highlights on a file list)
+                if files and #line > 0 then
+                    pcall(api.nvim_buf_set_extmark, qbuf, NS_SYNTAX, i - 1, 0, {
+                        end_col = #line,
+                        hl_group = "LvimQfLocFile",
+                    })
+                end
             end
         end
     end
@@ -461,6 +504,8 @@ local function decorate(qbuf, loclist_win)
                 vim.wo[win].cursorline = true
                 vim.wo[win].cursorlineopt = "both"
                 vim.wo[win].winhighlight = "CursorLine:LvimQfLocCursorLine"
+                vim.wo[win].colorcolumn = "" -- no vertical colour column in the list
+                vim.wo[win].cursorcolumn = false
                 -- clear the native qf window's default statusline (`[Quickfix List] …`) so it falls back to
                 -- the user's global (chrome) statusline instead of vim's plain qf one
                 vim.wo[win].statusline = ""
@@ -553,14 +598,74 @@ function M.rerender(loclist_win)
     end
 end
 
+--- Rename / move each file whose path row was edited (a FILE list). Crash-safe: never overwrites an existing
+--- target (skipped), creates the new path's parent dirs, and renames an open buffer to follow.
+---@param renames table[]  { { old = string, new = string, bufnr = integer? }, ... }
+---@return integer applied, integer skipped
+local function apply_renames(renames)
+    local applied, skipped = 0, 0
+    for _, r in ipairs(renames) do
+        if r.old ~= "" and r.new ~= "" and r.old ~= r.new then
+            if vim.fn.filereadable(r.new) == 1 or vim.fn.isdirectory(r.new) == 1 then
+                skipped = skipped + 1 -- target exists → never overwrite
+            else
+                pcall(vim.fn.mkdir, vim.fn.fnamemodify(r.new, ":h"), "p") -- create the target's parent dirs
+                if vim.fn.rename(r.old, r.new) == 0 then
+                    applied = applied + 1
+                    if r.bufnr and r.bufnr > 0 and api.nvim_buf_is_valid(r.bufnr) then
+                        local was_mod = vim.bo[r.bufnr].modified
+                        if pcall(api.nvim_buf_set_name, r.bufnr, r.new) and not was_mod then
+                            pcall(function()
+                                vim.bo[r.bufnr].modified = false
+                            end)
+                        end
+                    end
+                else
+                    skipped = skipped + 1
+                end
+            end
+        end
+    end
+    return applied, skipped
+end
+
 --- Apply the buffer's edits back to the source files, then re-render. Crash-safe: each edit is only written
 --- when the file's current line still equals what we rendered (external change → skipped); conflicting edits
---- to one line are reported; every file op is guarded.
+--- to one line are reported; every file op is guarded. A FILE list renames/moves files instead (apply_renames).
 ---@param qbuf integer
 ---@param loclist_win integer?
 local function apply(qbuf, loclist_win)
     local map = rows[qbuf] or {}
     local lines = api.nvim_buf_get_lines(qbuf, 0, -1, false)
+    local notify = require("lvim-qf-loc.utils.notify")
+    local what = loclist_win and vim.fn.getloclist(loclist_win, { items = 0 }) or vim.fn.getqflist({ items = 0 })
+
+    -- A FILE list: every row is the file's PATH — applying it RENAMES / MOVES the file to the edited path.
+    if list_is_files(what.items or {}) then
+        local renames = {}
+        for _, m in ipairs(api.nvim_buf_get_extmarks(qbuf, NS, 0, -1, {})) do
+            local data = map[m[1]]
+            local new = lines[m[2] + 1]
+            if data and data.path ~= "" and new ~= nil then
+                new = (new:gsub("^%s+", ""):gsub("%s+$", "")) -- trim
+                if new ~= "" and new ~= data.orig then
+                    renames[#renames + 1] = { old = data.path, new = vim.fn.fnamemodify(new, ":p"), bufnr = data.bufnr }
+                end
+            end
+        end
+        local applied, skipped = apply_renames(renames)
+        vim.bo[qbuf].modified = false
+        vim.bo[qbuf].modifiable = true
+        decorate(qbuf, loclist_win)
+        if applied > 0 or skipped > 0 then
+            notify(
+                ("Renamed %d file(s)%s."):format(applied, skipped > 0 and (", skipped " .. skipped) or ""),
+                vim.log.levels.INFO
+            )
+        end
+        return
+    end
+
     -- gather edits per file: changes[path] = { [lnum] = { new, orig, bufnr } }
     local changes, conflicts = {}, {}
     for _, m in ipairs(api.nvim_buf_get_extmarks(qbuf, NS, 0, -1, {})) do
@@ -582,7 +687,6 @@ local function apply(qbuf, loclist_win)
     -- re-render the qf from the now-updated sources (refresh the rows + their orig baselines)
     vim.bo[qbuf].modifiable = true
     decorate(qbuf, loclist_win)
-    local notify = require("lvim-qf-loc.utils.notify")
     if #conflicts > 0 then
         notify(
             ("Applied %d, skipped %d; conflicts: %s"):format(applied, skipped, table.concat(conflicts, ", ")),
@@ -729,6 +833,21 @@ function M.setup_buffer(qbuf)
         vim.keymap.set("n", keys.help, function()
             require("lvim-qf-loc.qf.help").show()
         end, { buffer = qbuf, nowait = true, silent = true, desc = "lvim-qf-loc: keymaps" })
+    end
+    -- C-d / C-u scroll the floating PREVIEW (peek more context) from the list, instead of the list itself
+    if config.preview.enabled then
+        for _, m in ipairs({ { config.preview.scroll_down or "<C-d>", 1 }, { config.preview.scroll_up or "<C-u>", -1 } }) do
+            if m[1] and m[1] ~= "" then
+                vim.keymap.set("n", m[1], function()
+                    require("lvim-qf-loc.qf.preview").scroll(m[2])
+                end, {
+                    buffer = qbuf,
+                    nowait = true,
+                    silent = true,
+                    desc = "lvim-qf-loc: scroll preview",
+                })
+            end
+        end
     end
     -- Editing is LINE-LOCKED: one row = one entry, so the actions that change the ROW COUNT are blocked — `o`/`O`
     -- (open line) and insert `<CR>`/`<C-m>`/`<C-j>` (newline) ADD a row; `dd` (delete line) and `J`/`gJ` (join)

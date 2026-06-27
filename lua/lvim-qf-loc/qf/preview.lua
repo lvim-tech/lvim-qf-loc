@@ -85,10 +85,10 @@ local function title_chunks(entry)
     if pos == "always" or (pos ~= "never" and (entry.type or "") == "") then
         local lnum = (entry.lnum and entry.lnum > 0) and entry.lnum or 1
         local col = (entry.col and entry.col > 0) and entry.col or 1
-        chunks[#chunks + 1] = { "╎ ", "LvimQfLocPreviewSep" }
+        chunks[#chunks + 1] = { "• ", "LvimQfLocPreviewSep" }
         chunks[#chunks + 1] = { "line ", "LvimQfLocPreviewLabel" }
         chunks[#chunks + 1] = { tostring(lnum), "LvimQfLocPreviewNum" }
-        chunks[#chunks + 1] = { " ╎ ", "LvimQfLocPreviewSep" }
+        chunks[#chunks + 1] = { " • ", "LvimQfLocPreviewSep" }
         chunks[#chunks + 1] = { "col ", "LvimQfLocPreviewLabel" }
         chunks[#chunks + 1] = { tostring(col) .. " ", "LvimQfLocPreviewNum" }
     end
@@ -101,6 +101,20 @@ function M.close()
         pcall(api.nvim_win_close, win, true)
     end
     win = nil
+end
+
+--- Scroll the floating preview by a half-page (`delta > 0` down, `< 0` up) WITHOUT leaving the quickfix list —
+--- a peek at more context around the entry. No-op when the preview is closed. Moving the list cursor re-centres
+--- the preview on the new entry, so the scroll is transient.
+---@param delta integer
+function M.scroll(delta)
+    if not (win and api.nvim_win_is_valid(win)) then
+        return
+    end
+    local key = api.nvim_replace_termcodes(delta > 0 and "<C-d>" or "<C-u>", true, false, true)
+    pcall(api.nvim_win_call, win, function()
+        vim.cmd("normal! " .. key)
+    end)
 end
 
 --- The geometry for the float: full width of the quickfix window, stacked just ABOVE it, using whatever
@@ -207,11 +221,14 @@ function M.update(entry, qwin)
         end
         win = w
     end
+    -- A POSITIONED entry (grep / diagnostics / references) marks its focused line with the ➤ sign + the
+    -- cursorline highlight; a plain FILE entry has no specific line, so it shows NEITHER — just line numbers.
+    local positioned = (entry.lnum and entry.lnum > 0) and true or false
     -- window-local look (guarded; a no-name scratch can reject some)
     pcall(function()
         vim.wo[win].number = false -- the statuscolumn below renders the number (with the ➤ marker)
         vim.wo[win].relativenumber = false
-        vim.wo[win].cursorline = true
+        vim.wo[win].cursorline = positioned
         vim.wo[win].cursorlineopt = "both"
         vim.wo[win].signcolumn = "no"
         vim.wo[win].foldenable = false
@@ -219,8 +236,10 @@ function M.update(entry, qwin)
         vim.wo[win].winbar = "%#NormalFloat# " -- one blank "air" row under the title, in the float's own bg
         -- The entry marker + line number live in a WINDOW-LOCAL statuscolumn, and the focused-line highlight
         -- in cursorline (mapped to config.preview.hl) — NOT buffer extmarks, which would leak the ➤ sign and the
-        -- highlight onto the real file buffer (and hide the line number in a sign-aware statuscolumn).
-        vim.wo[win].statuscolumn = "%{% v:relnum == 0 ? '%#LvimQfLocPreviewMarker#➤' : ' ' %} %#LineNr#%{v:lnum} "
+        -- highlight onto the real file buffer (and hide the line number in a sign-aware statuscolumn). For a
+        -- file entry the marker column is blank (no ➤).
+        local marker = positioned and "%{% v:relnum == 0 ? '%#LvimQfLocPreviewMarker#➤' : ' ' %}" or " "
+        vim.wo[win].statuscolumn = marker .. " %#LineNr#%{v:lnum} "
         vim.wo[win].winhighlight = "CursorLine:" .. config.preview.hl
     end)
     -- scroll to the entry + centre it, and highlight its line

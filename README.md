@@ -22,9 +22,11 @@ gracefully).
 
 **Quickfix module** (replaces nvim-bqf + quicker.nvim):
 
-- **Preview** — a live float of the entry under the cursor (real file buffer, syntax-highlighted), no FFI / magicwin
+- **Preview** — a live float of the entry under the cursor (real file buffer, syntax-highlighted), no FFI / magicwin;
+  `<C-d>` / `<C-u>` scroll it from the list (peek more context)
 - **Editable** — each entry's source line is editable; `:w` writes the changes back to the files, crash-safe
-  (writes only when the file still matches; conflict detection; every op guarded)
+  (writes only when the file still matches; conflict detection; every op guarded). A plain **file list** instead
+  edits each row's **path** — `:w` renames / moves the file (creates parent dirs, never overwrites)
 - **Context** — expand / collapse N source lines around each entry (`>` / `<`)
 - **Browser** — the list + a real-Neovim preview in the lvim-utils area, with fuzzy narrowing, marking and a
   severity filter bar (`:LvimQf browse`); the **Browse** tab lists every stored list, pick one to browse it

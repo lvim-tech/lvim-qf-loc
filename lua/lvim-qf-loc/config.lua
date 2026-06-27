@@ -28,6 +28,9 @@ return {
         --   "auto"   — only for non-diagnostic lists (grep / references), where the position is a match
         --   "always" / "never"
         position = "auto",
+        -- scroll the preview a half-page from the LIST (peek more context) without leaving it
+        scroll_down = "<C-d>",
+        scroll_up = "<C-u>",
     },
 
     -- The EDITABLE quickfix (qf/edit.lua): the native qf buffer shows each entry's SOURCE LINE (editable);
