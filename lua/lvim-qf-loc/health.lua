@@ -26,14 +26,14 @@ function M.check()
         warn("Neovim 0.10+ is recommended (inline virtual text + extmark editing).")
     end
 
-    -- lvim-utils: required by the area view, the browser, the history picker, and search&replace's notifier.
+    -- lvim-utils: required by the area view + the browser (the popup, `:LvimQf browse` / `diagnostics`).
     local has_utils = pcall(require, "lvim-utils.picker")
     if has_utils then
-        ok("lvim-utils found (area view / browser / history available).")
+        ok("lvim-utils found (area view / browser available).")
     else
         warn(
-            "lvim-utils not found — the area view, :LvimQfBrowse and :LvimQfHistory are unavailable; the "
-                .. "native view (editable + preview) still works."
+            "lvim-utils not found — the area view and `:LvimQf browse` are unavailable; the native view "
+                .. "(editable + preview) still works."
         )
     end
 

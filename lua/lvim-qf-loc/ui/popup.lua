@@ -1,29 +1,26 @@
--- Unified tabs popup for LvimQf / LvimLoc.
--- All tabs use action rows so keymaps are bound consistently at attach time.
+-- lua/lvim-qf-loc/ui/popup.lua
+-- The LvimQf / LvimLoc MANAGEMENT popup — a tabbed menu (lvim-utils.ui.tabs in `menu` mode, so each tab's rows
+-- are a navigable BODY list) over the stored quickfix / location lists. Three tabs:
+--   Browse  — every stored list; pick one → switch to it (relative `:cnewer`/`:colder`) + open the live-preview
+--             browser of its entries
+--   Delete  — remove a stored list
+--   Storage — save / load all lists to a per-project JSON, show the cwd
+-- Opened by `:LvimQf` / `:LvimQf browse|delete|storage` (+ the LvimLoc twins). The list NAVIGATION actions
+-- (open/close/next/prev) and `diagnostics` are DIRECT commands, NOT tabs — see hooks/commands.lua.
+--
+---@module "lvim-qf-loc.ui.popup"
 
 local utils = require("lvim-qf-loc.utils")
 local config = require("lvim-qf-loc.config")
-local nav = require("lvim-qf-loc.core.nav")
-local diagnostics = require("lvim-qf-loc.core.diagnostics")
-
-local function tab_icon(name)
-    local t = config.tabs and config.tabs[name]
-    return t and t.icon or nil
-end
 
 local M = {}
 
--- ── helpers ────────────────────────────────────────────────────────────────
-
-local function action(label, fn)
-    return {
-        type = "action",
-        label = label,
-        run = function(_, close)
-            fn()
-            close(false, nil)
-        end,
-    }
+--- The configured Nerd-font icon for tab `name` (config.tabs[name].icon), or nil.
+---@param name string
+---@return string?
+local function tab_icon(name)
+    local t = config.tabs and config.tabs[name]
+    return t and t.icon or nil
 end
 
 local function spacer()
@@ -32,24 +29,16 @@ end
 
 -- ── tab builders ───────────────────────────────────────────────────────────
 
-local function nav_tab(kind)
-    local is_qf = kind == "quick_fix"
-    return {
-        label = "Navigate",
-        icon = tab_icon("navigate"),
-        rows = {
-            action("Open", is_qf and nav.quick_fix_open or nav.loc_list_open),
-            action("Close", is_qf and nav.quick_fix_close or nav.loc_list_close),
-            spacer(),
-            action("Next", is_qf and nav.quick_fix_next or nav.loc_list_next),
-            action("Previous", is_qf and nav.quick_fix_prev or nav.loc_list_prev),
-        },
-    }
-end
-
-local function choice_tab(kind)
+--- Browse: list every stored quickfix/location list; choosing one switches to it (relative `:cnewer`/`:colder`)
+--- and opens the live-preview BROWSER of its entries. `loclist_win` is nil for the quickfix.
+---@param kind "quick_fix"|"loc"
+---@param loclist_win integer?
+---@return table tab
+local function browse_tab(kind, loclist_win)
     local len = utils.length(kind)
     local current_nr = utils.current(kind)
+    local newer = kind == "quick_fix" and "cnewer" or "lnewer"
+    local older = kind == "quick_fix" and "colder" or "lolder"
     local rows = {}
     for i = 1, len do
         local title = utils.title(kind, i)
@@ -59,31 +48,28 @@ local function choice_tab(kind)
             type = "action",
             label = label,
             run = function(_, close)
-                local newer = kind == "quick_fix" and "cnewer" or "lnewer"
-                local older = kind == "quick_fix" and "colder" or "lolder"
-                local open = kind == "quick_fix" and "copen" or "lopen"
                 local diff = idx - current_nr
-                if diff > 0 then
-                    for _ = 1, diff do
-                        vim.cmd("silent " .. newer)
-                    end
-                elseif diff < 0 then
-                    for _ = 1, -diff do
-                        vim.cmd("silent " .. older)
-                    end
+                for _ = 1, diff do
+                    vim.cmd("silent " .. newer)
                 end
-                vim.cmd("silent " .. open)
-                utils.notify("Switched to: " .. title)
+                for _ = 1, -diff do
+                    vim.cmd("silent " .. older)
+                end
                 close(false, nil)
+                require("lvim-qf-loc.qf.browser").open(loclist_win)
             end,
         })
     end
     if #rows == 0 then
         rows = { { type = "text", label = "No lists available" } }
     end
-    return { label = "Switch", icon = tab_icon("switch"), rows = rows }
+    return { name = "browse", label = "Browse", icon = tab_icon("browse"), rows = rows }
 end
 
+--- Delete: remove a stored list. Deleting the CURRENT one closes its window first; deleting the "Diagnostics"
+--- list clears the active flag so the DiagnosticChanged reload stops tracking it.
+---@param kind "quick_fix"|"loc"
+---@return table tab
 local function delete_tab(kind)
     local len = utils.length(kind)
     local current_nr = utils.current(kind)
@@ -126,11 +112,17 @@ local function delete_tab(kind)
     if #rows == 0 then
         rows = { { type = "text", label = "No lists available" } }
     end
-    return { label = "Delete", icon = tab_icon("delete"), rows = rows }
+    return { name = "delete", label = "Delete", icon = tab_icon("delete"), rows = rows }
 end
 
+--- Storage: save all lists to / load them from a per-project JSON (`filename`), and show the cwd.
+---@param kind "quick_fix"|"loc"
+---@param filename string
+---@param setfn function  vim.fn.setqflist | vim.fn.setloclist
+---@return table tab
 local function storage_tab(kind, filename, setfn)
     return {
+        name = "storage",
         label = "Storage",
         icon = tab_icon("storage"),
         rows = {
@@ -184,50 +176,34 @@ local function storage_tab(kind, filename, setfn)
     }
 end
 
-local function diagnostics_tab()
-    return {
-        label = "Diagnostics",
-        icon = tab_icon("diagnostics"),
-        rows = { action("Load diagnostics", diagnostics.qf_diagnostics) },
-    }
-end
-
 -- ── public ─────────────────────────────────────────────────────────────────
 
-local function open(kind, tab_selector)
+--- Open the management popup on `tab_selector` (a tab `name`: "browse"|"delete"|"storage"; nil → the first tab,
+--- Browse). `loclist_win` is the window whose location list to act on (nil for the quickfix).
+---@param kind "quick_fix"|"loc"
+---@param tab_selector string?
+---@param loclist_win integer?
+local function open(kind, tab_selector, loclist_win)
     local instance = require("lvim-qf-loc.ui").get()
     if not instance then
         return
     end
-
     local filename = kind == "quick_fix" and ".lvim_qf.json" or ".lvim_loc.json"
     local setfn = kind == "quick_fix" and vim.fn.setqflist or vim.fn.setloclist
     local title = kind == "quick_fix" and "Quickfix" or "Location"
-
-    local tabs = {
-        nav_tab(kind),
-        choice_tab(kind),
-        delete_tab(kind),
-        storage_tab(kind, filename, setfn),
-    }
-    if kind == "quick_fix" then
-        table.insert(tabs, diagnostics_tab())
-    end
-
     instance.tabs({
         title = title,
         tab_selector = tab_selector,
-        tabs = tabs,
         menu = true, -- every tab is a navigable MENU: its action rows are a selectable BODY list, not footer chips
+        tabs = {
+            browse_tab(kind, loclist_win),
+            delete_tab(kind),
+            storage_tab(kind, filename, setfn),
+        },
         callback = function() end,
     })
 end
 
-M.open_qf = function(tab_selector)
-    open("quick_fix", tab_selector)
-end
-M.open_loc = function(tab_selector)
-    open("loc", tab_selector)
-end
+M.open = open
 
 return M

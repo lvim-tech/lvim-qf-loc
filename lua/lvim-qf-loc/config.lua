@@ -15,7 +15,7 @@ return {
     --              context expand/collapse, and a floating PREVIEW of the entry under the cursor.
     --   "area"   — the lvim-utils AREA: the list + a real-Neovim preview, with fuzzy narrowing, the mark dot,
     --              `<C-q>` → a new list, and the severity filter bar.
-    -- `:LvimQfBrowse` always opens the area view explicitly, regardless of this.
+    -- `:LvimQf browse` always opens the area view explicitly, regardless of this.
     view = "native",
 
     -- (native view) The floating PREVIEW of the entry under the cursor (qf/preview.lua).
@@ -89,11 +89,9 @@ return {
     },
 
     tabs = {
-        navigate = { icon = "󰜌" },
-        switch = { icon = "󰒊" },
+        browse = { icon = "󰒊" },
         delete = { icon = "󰆴" },
         storage = { icon = "󰆼" },
-        diagnostics = { icon = "󰋽" },
     },
 
     popup_global = {

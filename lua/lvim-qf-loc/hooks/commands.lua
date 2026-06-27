@@ -1,37 +1,67 @@
+-- lua/lvim-qf-loc/hooks/commands.lua
+-- The two unified commands `:LvimQf` / `:LvimLoc <subcommand>`:
+--   open · close · next · prev   → drive the list directly (no popup)
+--   diagnostics  (quickfix only) → load the diagnostics into a list + open the browser, or notify when none
+--   browse · delete · storage    → open the management popup on that tab
+-- No argument opens the popup on its first tab (Browse). For LvimLoc a subcommand acts on the window that was
+-- current when the command ran.
+--
+---@module "lvim-qf-loc.hooks.commands"
+
 local popup = require("lvim-qf-loc.ui.popup")
-local browser = require("lvim-qf-loc.qf.browser")
-local replace = require("lvim-qf-loc.qf.replace")
-local history = require("lvim-qf-loc.qf.history")
+local nav = require("lvim-qf-loc.core.nav")
+local diagnostics = require("lvim-qf-loc.core.diagnostics")
 
 local M = {}
 
--- Maps subcommand name → the tab label it should open on.
-local qf_tabs = {
-    navigate = "Navigate",
-    switch = "Switch",
-    delete = "Delete",
-    storage = "Storage",
-    diagnostics = "Diagnostics",
-}
+--- The subcommand → handler table for one kind ("quick_fix" | "loc").
+---@param kind "quick_fix"|"loc"
+---@return table<string, function>
+local function actions(kind)
+    local is_qf = kind == "quick_fix"
+    -- A loc subcommand acts on the window current WHEN the command runs (captured at call time, not setup).
+    local function win()
+        return is_qf and nil or vim.api.nvim_get_current_win()
+    end
+    local a = {
+        open = is_qf and nav.quick_fix_open or nav.loc_list_open,
+        close = is_qf and nav.quick_fix_close or nav.loc_list_close,
+        next = is_qf and nav.quick_fix_next or nav.loc_list_next,
+        prev = is_qf and nav.quick_fix_prev or nav.loc_list_prev,
+        browse = function()
+            popup.open(kind, "browse", win())
+        end,
+        delete = function()
+            popup.open(kind, "delete", win())
+        end,
+        storage = function()
+            popup.open(kind, "storage", win())
+        end,
+    }
+    if is_qf then
+        a.diagnostics = diagnostics.qf_diagnostics -- quickfix only — location lists carry no diagnostics
+    end
+    return a
+end
 
-local loc_tabs = {
-    navigate = "Navigate",
-    switch = "Switch",
-    delete = "Delete",
-    storage = "Storage",
-}
-
-local function register(name, tab_map, open_fn)
-    local keys = vim.tbl_keys(tab_map)
+---@param name string  the command name
+---@param kind "quick_fix"|"loc"
+local function register(name, kind)
+    local a = actions(kind)
+    local keys = vim.tbl_keys(a)
     table.sort(keys)
-
     vim.api.nvim_create_user_command(name, function(opts)
         local sub = opts.args ~= "" and opts.args or nil
-        if sub and not tab_map[sub] then
+        if not sub then -- no subcommand → the popup on its first tab (Browse)
+            popup.open(kind, nil, kind == "loc" and vim.api.nvim_get_current_win() or nil)
+            return
+        end
+        local fn = a[sub]
+        if not fn then
             vim.notify(name .. ": unknown subcommand '" .. sub .. "'", vim.log.levels.WARN, { title = "LVIM LIST" })
             return
         end
-        open_fn(sub and tab_map[sub] or nil)
+        fn()
     end, {
         nargs = "?",
         complete = function()
@@ -41,29 +71,8 @@ local function register(name, tab_map, open_fn)
 end
 
 M.setup = function()
-    register("LvimQf", qf_tabs, popup.open_qf)
-    register("LvimLoc", loc_tabs, popup.open_loc)
-    -- the browser: the entry list + a live real-Neovim preview in the lvim-utils area (preview / fuzzy / mark).
-    vim.api.nvim_create_user_command("LvimQfBrowse", function()
-        browser.open(nil)
-    end, { desc = "Browse the quickfix list (live preview, fuzzy, mark, filter)" })
-    vim.api.nvim_create_user_command("LvimLocBrowse", function()
-        browser.open(vim.api.nvim_get_current_win())
-    end, { desc = "Browse the current window's location list" })
-    -- project-wide search & replace across the list's entries (prompts for the Vim regex + replacement)
-    vim.api.nvim_create_user_command("LvimQfReplace", function()
-        replace.prompt(nil)
-    end, { desc = "Search & replace across the quickfix list" })
-    vim.api.nvim_create_user_command("LvimLocReplace", function()
-        replace.prompt(vim.api.nvim_get_current_win())
-    end, { desc = "Search & replace across the location list" })
-    -- a picker over the qf / loc history (jump to a past list)
-    vim.api.nvim_create_user_command("LvimQfHistory", function()
-        history.open(nil)
-    end, { desc = "Pick from the quickfix history" })
-    vim.api.nvim_create_user_command("LvimLocHistory", function()
-        history.open(vim.api.nvim_get_current_win())
-    end, { desc = "Pick from the location-list history" })
+    register("LvimQf", "quick_fix")
+    register("LvimLoc", "loc")
 end
 
 return M
