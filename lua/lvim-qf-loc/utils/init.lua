@@ -86,4 +86,13 @@ M.write_file = function(file, content)
     end
 end
 
+-- Delete a saved-lists file. Returns true only if it existed AND was removed (so the caller
+-- can tell "deleted" from "there was nothing to delete").
+M.delete_file = function(file)
+    if vim.fn.filereadable(file) == 0 then
+        return false
+    end
+    return vim.fn.delete(file) == 0
+end
+
 return M

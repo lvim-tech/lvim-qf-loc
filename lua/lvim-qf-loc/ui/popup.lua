@@ -163,6 +163,18 @@ local function storage_tab(kind, filename, setfn)
                     close(false, nil)
                 end,
             },
+            {
+                type = "action",
+                label = "Delete",
+                run = function(_, close)
+                    if utils.delete_file(vim.fn.getcwd() .. "/" .. filename) then
+                        utils.notify("Deleted " .. filename)
+                    else
+                        utils.notify("No saved lists found")
+                    end
+                    close(false, nil)
+                end,
+            },
             spacer(),
             {
                 type = "action",
@@ -207,7 +219,6 @@ local function open(kind, tab_selector, loclist_win)
         title = title,
         tab_selector = tab_selector,
         menu = true, -- every tab is a navigable MENU: its action rows are a selectable BODY list, not footer chips
-        pad = 1, -- a single-space body lpad (compact: rows sit one space from the edge)
         width = 0.9,
         footer_hints = true, -- bottom key-hint legend (panel keys • focused-row keys), like the control center
         -- add a BOTTOM edge (" ") so the content gets a closing border row below it (the frame defaults to none)
