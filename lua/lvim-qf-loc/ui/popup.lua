@@ -61,7 +61,7 @@ local function browse_tab(kind, loclist_win)
         })
     end
     if #rows == 0 then
-        rows = { { type = "text", label = "No lists available" } }
+        rows = { { type = "action", flat = true, tight = true, label = "No lists available" } }
     end
     return { name = "browse", label = "Browse", icon = tab_icon("browse"), rows = rows }
 end
@@ -110,7 +110,7 @@ local function delete_tab(kind)
         })
     end
     if #rows == 0 then
-        rows = { { type = "text", label = "No lists available" } }
+        rows = { { type = "action", flat = true, tight = true, label = "No lists available" } }
     end
     return { name = "delete", label = "Delete", icon = tab_icon("delete"), rows = rows }
 end
@@ -118,7 +118,7 @@ end
 --- Storage: save all lists to / load them from a per-project JSON (`filename`), and show the cwd.
 ---@param kind "quick_fix"|"loc"
 ---@param filename string
----@param setfn function  vim.fn.setqflist | vim.fn.setloclist
+---@param setfn fun(list: table, action: string, what: table)  normalised qf/loc setter (window arg hidden)
 ---@return table tab
 local function storage_tab(kind, filename, setfn)
     return {
@@ -157,7 +157,7 @@ local function storage_tab(kind, filename, setfn)
                     end
                     local len = utils.table_length(data)
                     for i = 1, len do
-                        setfn(0, {}, " ", data[i])
+                        setfn({}, " ", data[i])
                     end
                     utils.notify("Loaded " .. tostring(len) .. " list(s)")
                     close(false, nil)
@@ -189,12 +189,29 @@ local function open(kind, tab_selector, loclist_win)
         return
     end
     local filename = kind == "quick_fix" and ".lvim_qf.json" or ".lvim_loc.json"
-    local setfn = kind == "quick_fix" and vim.fn.setqflist or vim.fn.setloclist
+    -- Normalised setter to ONE `(list, action, what)` signature: `setqflist` takes those three, but
+    -- `setloclist` prepends a window-number arg — so calling the raw fn with a leading `0` blew up `setqflist`
+    -- with "too many arguments" (the Quickfix → Load path). The wrapper hides that difference.
+    local setfn
+    if kind == "quick_fix" then
+        setfn = function(list, action, what)
+            return vim.fn.setqflist(list, action, what)
+        end
+    else
+        setfn = function(list, action, what)
+            return vim.fn.setloclist(0, list, action, what)
+        end
+    end
     local title = kind == "quick_fix" and "Quickfix" or "Location"
     instance.tabs({
         title = title,
         tab_selector = tab_selector,
         menu = true, -- every tab is a navigable MENU: its action rows are a selectable BODY list, not footer chips
+        pad = 1, -- a single-space body lpad (compact: rows sit one space from the edge)
+        width = 0.9,
+        footer_hints = true, -- bottom key-hint legend (panel keys • focused-row keys), like the control center
+        -- add a BOTTOM edge (" ") so the content gets a closing border row below it (the frame defaults to none)
+        border = { "", " ", "", " ", "", " ", "", " " },
         tabs = {
             browse_tab(kind, loclist_win),
             delete_tab(kind),
