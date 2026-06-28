@@ -219,7 +219,7 @@ local function open(kind, tab_selector, loclist_win)
         title = title,
         tab_selector = tab_selector,
         menu = true, -- every tab is a navigable MENU: its action rows are a selectable BODY list, not footer chips
-        width = 0.9,
+        width = config.popup_global.width,
         footer_hints = true, -- bottom key-hint legend (panel keys • focused-row keys), like the control center
         -- add a BOTTOM edge (" ") so the content gets a closing border row below it (the frame defaults to none)
         border = { "", " ", "", " ", "", " ", "", " " },
