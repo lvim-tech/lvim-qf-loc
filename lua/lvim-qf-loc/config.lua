@@ -22,7 +22,10 @@ return {
     preview = {
         enabled = true,
         max_height = 15,
-        border = "rounded",
+        -- The title-canon border: a top " " edge ONLY (no ring), which CARRIES the centered `file │ line │ col`
+        -- native border-title — the borderless `config.ui.border = "none"` has no top edge, so a titled float
+        -- needs its own. Resolved (corners filled) by lvim-utils.ui.util; matches the help-window canon.
+        border = { "", " ", "", "", "", "", "", "" },
         hl = "Visual", -- the focused entry's line highlight inside the preview
         -- whether the title shows `line N │ col M` after the filename:
         --   "auto"   — only for non-diagnostic lists (grep / references), where the position is a match

@@ -72,19 +72,17 @@ end
 
 --- The shared frame border — `lvim-utils.config.ui.border`, the ONE source every lvim-tech panel follows, so
 --- the preview re-borders in lockstep with the rest of the UI from that single key. The config value is the
---- chassis' PADDED representation (empty corners between " " edges), which `nvim_open_win` rejects directly —
---- so it is run through `lvim-utils.ui.util.resolve_border` (the same normalizer the chassis uses). Falls back
---- to the plugin's own `config.preview.border` when lvim-utils is absent.
+--- The PREVIEW float's own border, resolved from `config.preview.border` (the title-canon top " " edge that
+--- carries the centered border-title). It is run through `lvim-utils.ui.util.resolve_border` (the chassis
+--- normalizer) because the padded representation (empty corners between " " edges) is rejected by
+--- `nvim_open_win` directly. Falls back to a plain "rounded" string when lvim-utils is absent.
 ---@return string|string[]
-local function frame_border()
-    local ok, uconf = pcall(require, "lvim-utils.config")
-    if ok and uconf.ui and uconf.ui.border then
-        local ok_util, util = pcall(require, "lvim-utils.ui.util")
-        if ok_util then
-            return util.resolve_border(uconf.ui.border)
-        end
+local function preview_border()
+    local ok, util = pcall(require, "lvim-utils.ui.util")
+    if ok and util.resolve_border then
+        return util.resolve_border(config.preview.border)
     end
-    return config.preview.border
+    return "rounded" -- standalone fallback (lvim-utils absent; a native string border nvim accepts as-is)
 end
 
 --- The centered TOP title: `<file> │ line <lnum> │ col <col>` as a coloured box — tight (no column padding).
@@ -151,18 +149,23 @@ local function geometry(qwin)
     -- `qrow + qheight`. Without this, a quickfix opened at the top of the screen had no room above and the
     -- preview never appeared.
     local screen_bottom = vim.o.lines - vim.o.cmdheight - 1 -- last usable screen row (0-based), above the cmdline
-    -- Usable CONTENT rows on each side, after reserving the float's two border rows + a one-row gap (= 3) so
-    -- it never sits on the qf window. `qrow + qheight` is the qf's statusline row. Earlier the border rows were
-    -- not reserved, so the float overlapped the first quickfix entry.
-    local above = (qrow - 1) - 3
-    local below = (screen_bottom - (qrow + qheight)) - 3
+    -- The float's actual BORDER rows: top + bottom edges of the resolved border (the title-canon = 1, top only;
+    -- a full ring = 2; "none" = 0). The reserve + the above-stack offset MUST follow this — the preview sits
+    -- DIRECTLY against the qf window (its top title border is the only chrome), so no stray empty gap rows.
+    local border = preview_border()
+    local btop = (type(border) == "table") and (((border[2] or "") ~= "") and 1 or 0) or 1
+    local bbot = (type(border) == "table") and (((border[6] or "") ~= "") and 1 or 0) or 1
+    local brows = btop + bbot
+    -- Usable CONTENT rows on each side, after reserving only the border rows (the title border is the separator).
+    local above = (qrow - 1) - brows
+    local below = (screen_bottom - (qrow + qheight + 1)) - brows
     local height, row
     if below >= above then
         height = math.min(config.preview.max_height, below)
-        row = qrow + qheight + 2 -- top border just below the qf statusline
+        row = qrow + qheight + 1 -- directly below the qf statusline; nvim adds the float's own (title) border
     else
         height = math.min(config.preview.max_height, above)
-        row = qrow - height - 3 -- leaves the bottom border + a gap above the qf
+        row = qrow - height - brows -- content + border sits directly above the qf window (no extra gap)
     end
     if height < 3 then
         return nil
@@ -175,7 +178,7 @@ local function geometry(qwin)
         height = height,
         focusable = false,
         style = "minimal",
-        border = frame_border(),
+        border = border,
         zindex = 50,
     }
 end
