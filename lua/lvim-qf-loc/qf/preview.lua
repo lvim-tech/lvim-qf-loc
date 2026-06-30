@@ -70,6 +70,23 @@ function M.setup()
     end
 end
 
+--- The shared frame border — `lvim-utils.config.ui.border`, the ONE source every lvim-tech panel follows, so
+--- the preview re-borders in lockstep with the rest of the UI from that single key. The config value is the
+--- chassis' PADDED representation (empty corners between " " edges), which `nvim_open_win` rejects directly —
+--- so it is run through `lvim-utils.ui.util.resolve_border` (the same normalizer the chassis uses). Falls back
+--- to the plugin's own `config.preview.border` when lvim-utils is absent.
+---@return string|string[]
+local function frame_border()
+    local ok, uconf = pcall(require, "lvim-utils.config")
+    if ok and uconf.ui and uconf.ui.border then
+        local ok_util, util = pcall(require, "lvim-utils.ui.util")
+        if ok_util then
+            return util.resolve_border(uconf.ui.border)
+        end
+    end
+    return config.preview.border
+end
+
 --- The centered TOP title: `<file> │ line <lnum> │ col <col>` as a coloured box — tight (no column padding).
 ---@param entry table
 ---@return table[]  title chunks for nvim_open_win
@@ -158,7 +175,7 @@ local function geometry(qwin)
         height = height,
         focusable = false,
         style = "minimal",
-        border = config.preview.border,
+        border = frame_border(),
         zindex = 50,
     }
 end

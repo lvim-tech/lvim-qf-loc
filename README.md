@@ -169,9 +169,9 @@ require("lvim-qf-loc").setup({
         storage = { icon = "󰆼" },
     },
 
-    -- Passed directly to lvim-utils ui.new() — overrides border, size, keys, icons, highlights, etc.
+    -- Passed directly to lvim-utils ui.new() — overrides size, keys, icons, highlights, etc.
+    -- (The frame border now follows the single shared lvim-utils `config.ui.border`.)
     popup_global = {
-        border = { "", "", "", " ", " ", " ", " ", " " },
         position = "editor",
         width = 0.8,
         height = 0.8,

@@ -98,7 +98,6 @@ return {
     },
 
     popup_global = {
-        border = { "", "", "", " ", " ", " ", " ", " " },
         position = "editor",
         width = 0.9, -- fraction of the screen wide for the management popup
         max_width = 0.8,

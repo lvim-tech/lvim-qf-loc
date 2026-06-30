@@ -103,7 +103,7 @@ function M.show()
     end
     frame.open({
         mode = "float",
-        border = { "", " ", "", " ", "", "", "", " " },
+        border = frame.FRAME_BORDER,
         title = "Quickfix keymaps",
         panel_border = "none",
         size = { width = { auto = true, max = 0.7 }, height = { auto = true, max = 0.7 } },
