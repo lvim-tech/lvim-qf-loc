@@ -1,3 +1,61 @@
+-- lua/lvim-qf-loc/config.lua
+-- The live configuration table. Holds the defaults; setup() merges user overrides into it IN PLACE (via the
+-- shared lvim-utils.utils.merge), so every `require("lvim-qf-loc.config")` reader sees the effective values —
+-- config.lua is the single source of truth. Pure data only: anything the plugin flips at runtime lives in
+-- lvim-qf-loc.state, never here.
+--
+---@module "lvim-qf-loc.config"
+
+---@class LvimQfLocPreviewConfig
+---@field enabled     boolean            Show the floating preview of the entry under the cursor (native view).
+---@field max_height  integer            Cap for the preview float's height in rows.
+---@field border      string|string[]    The preview float's border — the title-canon top " " edge that carries the border-title.
+---@field hl          string             Highlight group for the focused entry's line inside the preview.
+---@field position    "auto"|"always"|"never"  When the title shows `line N │ col M` after the filename.
+---@field scroll_down string             Key that scrolls the preview a half-page down from the list.
+---@field scroll_up   string             Key that scrolls the preview a half-page up from the list.
+
+---@class LvimQfLocEditKeys
+---@field open   string  Open the entry in the window the quickfix was called from.
+---@field vsplit string  Open the entry in a vertical split.
+---@field split  string  Open the entry in a horizontal split.
+---@field tab    string  Open the entry in a new tab.
+---@field help   string  Open the keymap cheatsheet.
+
+---@class LvimQfLocEditConfig
+---@field enabled            boolean          Editable quickfix (source line is editable; `:w` writes back).
+---@field autosave           "unmodified"|boolean  Which touched files to save on `:w` ("unmodified" | true | false).
+---@field separator          string           Divider between the virtual `file:lnum` prefix and the editable text.
+---@field max_filename_width integer          Cap for the aligned filename column (longer paths get a leading …).
+---@field syntax             boolean          Treesitter-highlight each entry's source line.
+---@field keys               LvimQfLocEditKeys  Keys mapped in the quickfix window.
+
+---@class LvimQfLocContextConfig
+---@field before     integer  Source lines shown BEFORE each entry when context is expanded.
+---@field after      integer  Source lines shown AFTER each entry when context is expanded.
+---@field dim_amount number   0..1 degree the context rows are dimmed (0 = full colour, 1 = invisible).
+---@field keys       table    Context keys: `{ expand, collapse, toggle }`.
+
+---@class LvimQfLocBrowserConfig
+---@field layout       "area"|"float"|"bottom"  Where the browser opens.
+---@field preview_side "above"|"below"|"right"|"left"  Where the file preview sits relative to the entry list.
+---@field height       table                    Area height per stack direction: `{ horizontal, vertical }`.
+---@field icons        table<string,string>     Entry `type` → its leading icon (E/W/I/N/H + `default`).
+
+---@class LvimQfLocConfig
+---@field notify       boolean                 Emit notifications (vim.notify) for list navigation / errors.
+---@field min_height   integer                 Minimum quickfix window height (rows).
+---@field max_height   integer                 Maximum quickfix window height (rows).
+---@field cfilter      boolean                 `packadd` Neovim's built-in `cfilter` on setup (`:Cfilter`/`:Lfilter`).
+---@field view         "native"|"area"         Which UI the quickfix opens in.
+---@field preview      LvimQfLocPreviewConfig  The floating preview of the entry under the cursor (native view).
+---@field edit         LvimQfLocEditConfig     The editable quickfix (source line editable; `:w` writes back).
+---@field context      LvimQfLocContextConfig  Context expand/collapse (source lines around each entry).
+---@field browser      LvimQfLocBrowserConfig  The quickfix / location browser in the lvim-utils area.
+---@field tabs         table<string,table>     Management-popup tab icons (`browse`/`delete`/`storage`).
+---@field popup_global table                   Options passed to the lvim-utils UI instance (size/keys/icons/labels).
+
+---@type LvimQfLocConfig
 return {
     notify = true,
     min_height = 1,

@@ -70,11 +70,9 @@ function M.setup()
     end
 end
 
---- The shared frame border — `lvim-utils.config.ui.border`, the ONE source every lvim-tech panel follows, so
---- the preview re-borders in lockstep with the rest of the UI from that single key. The config value is the
 --- The PREVIEW float's own border, resolved from `config.preview.border` (the title-canon top " " edge that
 --- carries the centered border-title). It is run through `lvim-utils.ui.util.resolve_border` (the chassis
---- normalizer) because the padded representation (empty corners between " " edges) is rejected by
+--- normalizer) because the padded representation — empty corners between " " edges — is rejected by
 --- `nvim_open_win` directly. Falls back to a plain "rounded" string when lvim-utils is absent.
 ---@return string|string[]
 local function preview_border()
@@ -85,7 +83,7 @@ local function preview_border()
     return "rounded" -- standalone fallback (lvim-utils absent; a native string border nvim accepts as-is)
 end
 
---- The centered TOP title: `<file> │ line <lnum> │ col <col>` as a coloured box — tight (no column padding).
+--- The centered TOP title: `<file> ➤ line <lnum> ➤ col <col>` as a coloured box — tight (no column padding).
 ---@param entry table
 ---@return table[]  title chunks for nvim_open_win
 local function title_chunks(entry)
@@ -100,10 +98,10 @@ local function title_chunks(entry)
     if pos == "always" or (pos ~= "never" and (entry.type or "") == "") then
         local lnum = (entry.lnum and entry.lnum > 0) and entry.lnum or 1
         local col = (entry.col and entry.col > 0) and entry.col or 1
-        chunks[#chunks + 1] = { "• ", "LvimQfLocPreviewSep" }
+        chunks[#chunks + 1] = { "➤ ", "LvimQfLocPreviewSep" }
         chunks[#chunks + 1] = { "line ", "LvimQfLocPreviewLabel" }
         chunks[#chunks + 1] = { tostring(lnum), "LvimQfLocPreviewNum" }
-        chunks[#chunks + 1] = { " • ", "LvimQfLocPreviewSep" }
+        chunks[#chunks + 1] = { " ➤ ", "LvimQfLocPreviewSep" }
         chunks[#chunks + 1] = { "col ", "LvimQfLocPreviewLabel" }
         chunks[#chunks + 1] = { tostring(col) .. " ", "LvimQfLocPreviewNum" }
     end

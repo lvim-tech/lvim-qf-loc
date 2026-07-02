@@ -1,23 +1,37 @@
--- Lazily-initialised shared lvim-utils UI instance.
--- Returns nil when lvim-utils is not installed so callers can fall back.
+-- lua/lvim-qf-loc/ui/init.lua
+-- Lazily-built, shared lvim-utils UI instance for the management popup. `get()` constructs it once from
+-- `config.popup_global` and caches it; `reset()` drops the cache so the next `get()` rebuilds against the
+-- current config (setup() calls it after merging user overrides). Returns nil when lvim-utils is absent, so
+-- callers can fall back gracefully.
+--
+---@module "lvim-qf-loc.ui"
 
-local _instance = nil
+local config = require("lvim-qf-loc.config")
 
-local function get()
-    if _instance then
-        return _instance
+local M = {}
+
+---@type table?  the cached lvim-utils UI instance (nil until built / after reset)
+local instance = nil
+
+--- The shared lvim-utils UI instance, built on first use from `config.popup_global`. nil when lvim-utils is
+--- not installed.
+---@return table?  the UI instance, or nil
+function M.get()
+    if instance then
+        return instance
     end
     local ok, mod = pcall(require, "lvim-utils.ui")
     if not ok then
         return nil
     end
-    local cfg = require("lvim-qf-loc.config").popup_global
-    _instance = mod.new(cfg)
-    return _instance
+    instance = mod.new(config.popup_global)
+    return instance
 end
 
-local function reset()
-    _instance = nil
+--- Drop the cached instance so the next get() rebuilds it (after a config merge).
+---@return nil
+function M.reset()
+    instance = nil
 end
 
-return { get = get, reset = reset }
+return M

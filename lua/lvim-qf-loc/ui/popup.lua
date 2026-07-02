@@ -12,6 +12,7 @@
 
 local utils = require("lvim-qf-loc.utils")
 local config = require("lvim-qf-loc.config")
+local state = require("lvim-qf-loc.state")
 
 local M = {}
 
@@ -90,7 +91,7 @@ local function delete_tab(kind)
                     if j ~= idx then
                         table.insert(updated, utils.list_to_json(kind, j))
                     elseif kind == "quick_fix" and utils.title("quick_fix", j) == "Diagnostics" then
-                        config.is_active = false
+                        state.is_active = false
                     end
                 end
                 if kind == "quick_fix" then

@@ -103,8 +103,9 @@ function M.show()
     end
     frame.open({
         mode = "float",
-        border = frame.FRAME_BORDER,
-        title = "Quickfix keymaps",
+        -- the help-window canon: a top " " edge ONLY (no ring) that carries the native, blue-tinted border-title
+        border = { "", " ", "", "", "", "", "", "" },
+        title = "QUICKFIX KEYMAPS",
         panel_border = "none",
         size = { width = { auto = true, max = 0.7 }, height = { auto = true, max = 0.7 } },
         close_keys = close,

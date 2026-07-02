@@ -5,30 +5,26 @@ CONTENTS                                                        *lvim-qf-loc*
 
   1. Introduction ........................... |lvim-qf-loc-intro|
   2. Requirements ........................... |lvim-qf-loc-requirements|
-  3. Popup commands ......................... |lvim-qf-loc-popup|
+  3. Commands ............................... |lvim-qf-loc-commands|
   4. Views .................................. |lvim-qf-loc-views|
   5. Editable quickfix ...................... |lvim-qf-loc-editable|
   6. Context ................................ |lvim-qf-loc-context|
   7. Preview ................................ |lvim-qf-loc-preview|
   8. Browser ................................ |lvim-qf-loc-browser|
-  9. Search & replace ....................... |lvim-qf-loc-replace|
-  10. History ............................... |lvim-qf-loc-history|
-  11. Configuration ......................... |lvim-qf-loc-config|
-  12. Health ................................ |lvim-qf-loc-health|
+  9. Configuration .......................... |lvim-qf-loc-config|
+  10. Health ................................ |lvim-qf-loc-health|
 
 ==============================================================================
 1. INTRODUCTION                                           *lvim-qf-loc-intro*
 
 lvim-qf-loc improves Neovim's quickfix and location lists. Besides the floating
-tabbed popup (navigate / switch / delete / persist lists, diagnostics into the
+tabbed popup (browse / delete / persist lists, and load diagnostics into the
 quickfix), it provides a full quickfix workflow that REPLACES nvim-bqf and
 quicker.nvim with a single, self-contained module:
 
   - a floating PREVIEW of the entry under the cursor,
   - an EDITABLE quickfix whose `:w` writes back to the files,
-  - CONTEXT expand/collapse around each entry,
-  - project-wide SEARCH & REPLACE across the entries,
-  - a HISTORY picker, and
+  - CONTEXT expand/collapse around each entry, and
   - a BROWSER hosted in the lvim-utils area.
 
 It is crash-safe by design: no LuaJIT FFI, no "magicwin" scroll math (nvim-bqf),
@@ -39,24 +35,35 @@ write is verified against the file before it is applied.
 ==============================================================================
 2. REQUIREMENTS                                    *lvim-qf-loc-requirements*
 
-  - Neovim 0.9+ (0.10+ recommended for the editable quickfix and the preview).
-  - lvim-utils (optional) — enables the tabbed UI, the "area" view, the browser
-    and the history picker. The native view works without it.
+  - Neovim 0.10+.
+  - lvim-utils (optional) — enables the tabbed UI, the "area" view and the
+    browser. The native view works without it.
 
 Disable nvim-bqf and quicker.nvim: this plugin owns 'quickfixtextfunc' and the
 quickfix window, and the three would conflict. See |lvim-qf-loc-health|.
 
 ==============================================================================
-3. POPUP COMMANDS                                         *lvim-qf-loc-popup*
+3. COMMANDS                                            *lvim-qf-loc-commands*
 
                                                                       *:LvimQf*
-:LvimQf [subcommand]    Open the quickfix popup. Subcommands (tab-completed):
-                        `navigate`, `switch`, `delete`, `storage`,
-                        `diagnostics`. With no subcommand, the first tab opens.
+:LvimQf [subcommand]    Quickfix command. With no subcommand the management
+                        popup opens on the Browse tab. Subcommands
+                        (tab-completed):
+
+                          open         open the quickfix window (`:copen`)
+                          close        close it (`:cclose`)
+                          next         next quickfix list (`:cnewer`)
+                          prev         previous quickfix list (`:colder`)
+                          diagnostics  load diagnostics into a list + browse
+                          browse       popup on the Browse tab
+                          delete       popup on the Delete tab
+                          storage      popup on the Storage tab
 
                                                                      *:LvimLoc*
-:LvimLoc [subcommand]   As above for the current window's location list
-                        (`navigate`, `switch`, `delete`, `storage`).
+:LvimLoc [subcommand]   As above for the current window's location list, WITHOUT
+                        `diagnostics` (location lists carry no diagnostics).
+                        `open`/`close`/`next`/`prev` map to
+                        `:lopen`/`:lclose`/`:lnewer`/`:lolder`.
 
 ==============================================================================
 4. VIEWS                                                  *lvim-qf-loc-views*
@@ -72,7 +79,7 @@ list always look the same — no two competing UIs.
   "area"                `:copen` opens the browser (|lvim-qf-loc-browser|) in
                         the lvim-utils area instead of the native window.
 
-`:LvimQfBrowse` opens the area browser explicitly in either view.
+`:LvimQf browse` opens the area browser explicitly in either view.
 
 ==============================================================================
 5. EDITABLE QUICKFIX                                   *lvim-qf-loc-editable*
@@ -80,6 +87,14 @@ list always look the same — no two competing UIs.
 In the native view each quickfix row shows its file's SOURCE LINE, editable;
 the `file:lnum` prefix is virtual text and cannot be broken by an edit. Edit any
 rows and `:w` to apply the changes to the files.
+
+Open keys inside the quickfix window (see `config.edit.keys`):
+
+  <CR>     open the entry in the window the quickfix was called from
+  <C-v>    open in a vertical split
+  <C-x>    open in a horizontal split
+  <C-t>    open in a new tab
+  g?       show the keymap cheatsheet
 
 Safety: a line is written only when the file's current text still equals what
 was shown (an external change is skipped, never clobbered); conflicting edits to
@@ -94,11 +109,14 @@ every file operation is guarded.
 ==============================================================================
 6. CONTEXT                                              *lvim-qf-loc-context*
 
-In the quickfix window:
+In the quickfix window (see `config.context.keys`):
 
-  >        Expand: add `config.context.before`/`after` source lines around each
+  zo       Expand: add `config.context.before`/`after` source lines around each
            entry as dim context rows. Repeat to add more.
-  <        Collapse: keep only the real entries.
+  zc       Collapse: keep only the real entries.
+
+`config.context.dim_amount` (0..1) sets how strongly the context rows are dimmed
+(0 = full syntax colour, 1 = invisible).
 
 Context rows are sourced live from the buffer, so they read (and edit) exactly
 like the real lines. `:cnext`/`:cprev` skip them.
@@ -109,73 +127,69 @@ like the real lines. `:cnext`/`:cprev` skip them.
 In the native view a single floating window above the quickfix shows the REAL
 file buffer of the entry under the cursor (live syntax), scrolled to the entry
 with its line highlighted; it follows the cursor and closes with the list. It
-uses only public window APIs — no FFI, no scroll math. Disable with
-`config.preview.enabled = false`.
+uses only public window APIs — no FFI, no scroll math.
+
+`config.preview.scroll_down`/`scroll_up` (default `<C-d>`/`<C-u>`) scroll the
+preview a half-page from the list; `config.preview.position`
+("auto"|"always"|"never") controls whether the title shows `line N │ col M`.
+Disable the preview with `config.preview.enabled = false`.
 
 ==============================================================================
 8. BROWSER                                              *lvim-qf-loc-browser*
 
-                                                                *:LvimQfBrowse*
-:LvimQfBrowse           Browse the quickfix list in the lvim-utils area: the
-                        list + a real-Neovim preview, with fuzzy narrowing, the
-                        mark dot, `<C-q>` → a new list, and (for diagnostic
-                        lists) a severity filter bar.
+`:LvimQf browse` (and `:LvimLoc browse`) opens the list in the lvim-utils area:
+the list + a real-Neovim preview, with fuzzy narrowing, the mark dot, `<C-q>` →
+a new list, and (for diagnostic lists) a severity filter bar. `config.browser`
+sets the layout, the preview side (`<C-n>`/`<C-p>` rotate it live) and the
+per-severity icons.
 
-                                                               *:LvimLocBrowse*
-:LvimLocBrowse          As above for the current window's location list.
-
-==============================================================================
-9. SEARCH & REPLACE                                     *lvim-qf-loc-replace*
-
-                                                               *:LvimQfReplace*
-:LvimQfReplace          Prompt for a Vim regex + replacement and apply the
-                        substitution to EVERY quickfix entry's source line at
-                        once, then write the files. Uses the same crash-safe
-                        writer as the editable quickfix (capture groups, word
-                        boundaries and flags all work).
-
-                                                              *:LvimLocReplace*
-:LvimLocReplace         As above for the location list.
+The Browse tab of the management popup lists every stored list; pick one to
+switch to it and open its entries in the browser.
 
 ==============================================================================
-10. HISTORY                                             *lvim-qf-loc-history*
-
-                                                               *:LvimQfHistory*
-:LvimQfHistory          Pick from the quickfix history (each stored list's title
-                        and size, newest first, the current one marked); confirm
-                        to jump to it and open it.
-
-                                                              *:LvimLocHistory*
-:LvimLocHistory         As above for the location-list history.
-
-==============================================================================
-11. CONFIGURATION                                        *lvim-qf-loc-config*
+9. CONFIGURATION                                        *lvim-qf-loc-config*
 >lua
   require("lvim-qf-loc").setup({
       notify = true,
+      cfilter = true,                  -- packadd :Cfilter / :Lfilter on setup
       view = "native",                 -- "native" | "area"
 
       preview = {                      -- (native view) floating preview
           enabled = true,
           max_height = 15,
-          border = "rounded",
+          border = { "", " ", "", "", "", "", "", "" },
           hl = "Visual",
+          position = "auto",           -- "auto" | "always" | "never"
+          scroll_down = "<C-d>",
+          scroll_up = "<C-u>",
       },
 
       edit = {                         -- editable quickfix
           enabled = true,
           autosave = "unmodified",     -- "unmodified" | true | false
           separator = "│",
+          max_filename_width = 40,
+          syntax = true,
+          keys = {
+              open = "<CR>",
+              vsplit = "<C-v>",
+              split = "<C-x>",
+              tab = "<C-t>",
+              help = "g?",
+          },
       },
 
       context = {                      -- expand/collapse context
           before = 3,
           after = 3,
-          keys = { expand = ">", collapse = "<", toggle = "" },
+          dim_amount = 0.4,
+          keys = { expand = "zo", collapse = "zc", toggle = "" },
       },
 
       browser = {                      -- the area browser
           layout = "area",
+          preview_side = "above",      -- "above" | "below" | "right" | "left"
+          height = { horizontal = 0.33, vertical = 0.66 },
           icons = { E = "󰅚 ", W = "󰀪 ", I = " ", N = " ", H = " ", default = " " },
       },
   })
@@ -184,11 +198,11 @@ User options are merged in place into the live config, so any module reading
 `require("lvim-qf-loc.config")` sees the effective values.
 
 ==============================================================================
-12. HEALTH                                               *lvim-qf-loc-health*
+10. HEALTH                                              *lvim-qf-loc-health*
 
 `:checkhealth lvim-qf-loc` reports the Neovim version, whether lvim-utils is
-present (for the area view / browser / history), the effective `view`, and
-warns if another plugin (nvim-bqf / quicker.nvim) owns 'quickfixtextfunc' or is
-still loaded — the one real source of conflicts.
+present (for the area view / browser), the effective `view`, and warns if
+another plugin (nvim-bqf / quicker.nvim) owns 'quickfixtextfunc' or is still
+loaded — the one real source of conflicts.
 
 vim:tw=78:ts=8:ft=help:norl:

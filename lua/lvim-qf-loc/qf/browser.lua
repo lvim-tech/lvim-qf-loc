@@ -9,6 +9,7 @@
 ---@module "lvim-qf-loc.qf.browser"
 
 local config = require("lvim-qf-loc.config")
+local notify = require("lvim-qf-loc.utils.notify")
 
 local M = {}
 
@@ -80,12 +81,12 @@ end
 function M.open(loclist_win, layout)
     local ok, picker = pcall(require, "lvim-utils.picker")
     if not ok then
-        require("lvim-qf-loc.utils.notify")("lvim-utils is required for the browser.", vim.log.levels.WARN)
+        notify("lvim-utils is required for the browser.", vim.log.levels.WARN)
         return
     end
     local items = build_items(loclist_win)
     if #items == 0 then
-        require("lvim-qf-loc.utils.notify")("List is empty.", vim.log.levels.INFO)
+        notify("List is empty.", vim.log.levels.INFO)
         return
     end
 

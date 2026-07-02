@@ -15,6 +15,10 @@
 local api = vim.api
 local config = require("lvim-qf-loc.config")
 local filecache = require("lvim-qf-loc.qf.filecache")
+local notify = require("lvim-qf-loc.utils.notify")
+local context = require("lvim-qf-loc.qf.context")
+local preview = require("lvim-qf-loc.qf.preview")
+local browser = require("lvim-qf-loc.qf.browser")
 
 local M = {}
 
@@ -637,7 +641,6 @@ end
 local function apply(qbuf, loclist_win)
     local map = rows[qbuf] or {}
     local lines = api.nvim_buf_get_lines(qbuf, 0, -1, false)
-    local notify = require("lvim-qf-loc.utils.notify")
     local what = loclist_win and vim.fn.getloclist(loclist_win, { items = 0 }) or vim.fn.getqflist({ items = 0 })
 
     -- A FILE list: every row is the file's PATH — applying it RENAMES / MOVES the file to the edited path.
@@ -811,7 +814,7 @@ function M.setup_buffer(qbuf)
     vim.bo[qbuf].modifiable = true
     -- the native qf buffer has no name, so `:w` would E32 before our BufWriteCmd can run — give it one
     pcall(api.nvim_buf_set_name, qbuf, "quickfix-" .. qbuf)
-    require("lvim-qf-loc.qf.context").setup_keys(qbuf, loclist_win) -- the >/< expand/collapse keys
+    context.setup_keys(qbuf, loclist_win) -- the context expand/collapse keys
     -- the window the qf was called FROM (its alternate window now that the qf is focused) — open targets it
     local owner_win = vim.fn.win_getid(vim.fn.winnr("#"))
     if owner_win == 0 or not api.nvim_win_is_valid(owner_win) or owner_win == api.nvim_get_current_win() then
@@ -839,7 +842,7 @@ function M.setup_buffer(qbuf)
         for _, m in ipairs({ { config.preview.scroll_down or "<C-d>", 1 }, { config.preview.scroll_up or "<C-u>", -1 } }) do
             if m[1] and m[1] ~= "" then
                 vim.keymap.set("n", m[1], function()
-                    require("lvim-qf-loc.qf.preview").scroll(m[2])
+                    preview.scroll(m[2])
                 end, {
                     buffer = qbuf,
                     nowait = true,
@@ -904,7 +907,7 @@ function M.setup_buffer(qbuf)
                 end
                 local ok, err = pcall(apply, qbuf, loclist_win)
                 if not ok then
-                    require("lvim-qf-loc.utils.notify")("Edit apply failed: " .. tostring(err), vim.log.levels.ERROR)
+                    notify("Edit apply failed: " .. tostring(err), vim.log.levels.ERROR)
                     pcall(function()
                         vim.bo[qbuf].modified = false
                     end)
@@ -921,7 +924,6 @@ function M.setup_buffer(qbuf)
     })
     -- the floating PREVIEW of the entry under the cursor — follows the cursor, closes with the window
     if config.preview.enabled then
-        local preview = require("lvim-qf-loc.qf.preview")
         local function show()
             local qwin = api.nvim_get_current_win()
             if not api.nvim_win_is_valid(qwin) or api.nvim_win_get_buf(qwin) ~= qbuf then
@@ -973,7 +975,7 @@ function M.setup()
                     if api.nvim_win_is_valid(qwin) then
                         pcall(api.nvim_win_close, qwin, true)
                     end
-                    require("lvim-qf-loc.qf.browser").open(loclist_win)
+                    browser.open(loclist_win)
                 end)
             else
                 M.setup_buffer(args.buf)

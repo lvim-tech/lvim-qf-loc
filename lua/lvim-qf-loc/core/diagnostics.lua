@@ -7,11 +7,12 @@
 ---@module "lvim-qf-loc.core.diagnostics"
 
 local utils = require("lvim-qf-loc.utils")
-local config = require("lvim-qf-loc.config")
+local state = require("lvim-qf-loc.state")
+local browser = require("lvim-qf-loc.qf.browser")
 
 local M = {}
 
-config.is_active = false
+state.is_active = false
 
 --- Sort comparator: errors before warnings before info before notes (unknown types last).
 ---@param a table
@@ -70,8 +71,8 @@ M.qf_diagnostics = function()
     else
         vim.fn.setqflist({}, " ", { title = "Diagnostics", items = items }) -- a new list becomes current
     end
-    config.is_active = true
-    require("lvim-qf-loc.qf.browser").open(nil)
+    state.is_active = true
+    browser.open(nil)
 end
 
 return M

@@ -1,9 +1,24 @@
+-- lua/lvim-qf-loc/init.lua
+-- The plugin entry point. `setup()` merges user options into the live config (in place, via the shared
+-- lvim-utils merge), pulls in Neovim's built-in `:Cfilter`/`:Lfilter` when enabled, registers the
+-- `:LvimQf`/`:LvimLoc` commands and the diagnostics / height autocmds, and wires the editable quickfix +
+-- preview. Every module reads `require("lvim-qf-loc.config")`, so the in-place merge is what makes user
+-- overrides visible everywhere.
+--
+---@module "lvim-qf-loc"
+
 local config = require("lvim-qf-loc.config")
 local autocmds = require("lvim-qf-loc.hooks.autocmds")
 local commands = require("lvim-qf-loc.hooks.commands")
+local ui = require("lvim-qf-loc.ui")
+local edit = require("lvim-qf-loc.qf.edit")
+local preview = require("lvim-qf-loc.qf.preview")
 
 local M = {}
 
+--- Configure and activate the plugin.
+---@param user_config LvimQfLocConfig?  User overrides, merged into the live config in place.
+---@return nil
 M.setup = function(user_config)
     if user_config ~= nil then
         -- merge IN PLACE into the live config table (config.lua is the single source of truth): every module
@@ -24,7 +39,7 @@ M.setup = function(user_config)
             end
             merge(config, user_config)
         end
-        require("lvim-qf-loc.ui").reset()
+        ui.reset()
     end
     -- bring in Neovim's built-in `:Cfilter` / `:Lfilter` (an opt plugin, not auto-loaded) — a natural companion
     -- to the quickfix UI; idempotent + guarded so a missing runtime never breaks setup
@@ -33,8 +48,8 @@ M.setup = function(user_config)
     end
     commands.setup()
     autocmds.init()
-    require("lvim-qf-loc.qf.edit").setup() -- the editable quickfix (quickfixtextfunc + the FileType qf hook)
-    require("lvim-qf-loc.qf.preview").setup() -- the preview footer highlights (themed, survive colorscheme)
+    edit.setup() -- the editable quickfix (quickfixtextfunc + the FileType qf hook)
+    preview.setup() -- the preview footer highlights (themed, survive colorscheme)
 end
 
 return M
