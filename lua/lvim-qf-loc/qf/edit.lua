@@ -719,11 +719,25 @@ function M.entry_at(qbuf, line)
     return nil
 end
 
---- A normal (non-float, non-quickfix) window to host the opened file when the calling window is gone.
+--- Can this window HOST an opened file? A REAL editor window — not a float, and carrying a normal (listed-file)
+--- buffer, i.e. `buftype == ""`. This rejects the quickfix / location list AND every side panel (neo-tree,
+--- Outline, terminal, a `nofile` scratch …): dropping the file into any of those was the "it lands in the wrong
+--- window / on top of the qf" bug — the old check only skipped `buftype == "quickfix"`.
+---@param w integer?
+---@return boolean
+local function is_normal(w)
+    return w ~= nil
+        and api.nvim_win_is_valid(w)
+        and api.nvim_win_get_config(w).relative == ""
+        and vim.bo[api.nvim_win_get_buf(w)].buftype == ""
+end
+
+--- The first NORMAL editor window to host the opened file, or nil when only special windows (panels / the
+--- quickfix) are open.
 ---@return integer?
 local function fallback_win()
     for _, w in ipairs(api.nvim_list_wins()) do
-        if api.nvim_win_get_config(w).relative == "" and vim.bo[api.nvim_win_get_buf(w)].buftype ~= "quickfix" then
+        if is_normal(w) then
             return w
         end
     end
@@ -736,30 +750,50 @@ end
 ---@param owner_win integer?
 ---@param mode string
 local function open_entry(qbuf, owner_win, mode)
+    local qf_win = api.nvim_get_current_win() -- the open key fired IN the quickfix window
     local entry = M.entry_at(qbuf, api.nvim_win_get_cursor(0)[1])
     if not (entry and entry.bufnr and entry.bufnr > 0 and api.nvim_buf_is_valid(entry.bufnr)) then
         return
     end
     pcall(vim.fn.bufload, entry.bufnr)
+    local scratch -- the empty buffer `topleft new` makes (fallback only); wipe it once the file takes its window
     if mode == "tab" then
-        vim.cmd("tabnew")
+        pcall(vim.cmd, "tabnew")
     else
-        local target = (owner_win and api.nvim_win_is_valid(owner_win)) and owner_win or fallback_win()
-        if not target then
-            return
-        end
-        api.nvim_set_current_win(target)
-        if mode == "vsplit" then
-            vim.cmd("vsplit")
-        elseif mode == "split" then
-            vim.cmd("split")
+        -- Host the file in a REAL editor window: the one the qf was called from IF it is still one (it can go
+        -- stale — closed, or now holding a panel), else any normal window. With NONE (only side panels + the
+        -- quickfix), open a FRESH full-width window at the top for the file so the quickfix + panels stay put.
+        -- (`aboveleft split` of the quickfix is E36 — its height is winfixheight-locked — and loading the file
+        -- into the quickfix window itself would clobber the list, which was the reported bug. `topleft new` takes
+        -- room from a FLEXIBLE window instead.)
+        local target = (is_normal(owner_win) and owner_win) or fallback_win()
+        if target then
+            api.nvim_set_current_win(target)
+            if mode == "vsplit" then
+                pcall(vim.cmd, "vsplit")
+            elseif mode == "split" then
+                pcall(vim.cmd, "split")
+            end
+        elseif pcall(vim.cmd, "topleft new") then
+            scratch = api.nvim_get_current_buf()
         end
     end
-    -- `nvim_win_set_buf` (not `:edit`) so an unsaved buffer in the target window can't block with E37
-    api.nvim_win_set_buf(0, entry.bufnr)
+    -- SAFETY NET: never load the file into the quickfix window itself — if a split could not be made and we still
+    -- sit on it, bail rather than overwrite the list (the reported bug). `nvim_win_set_buf` (not `:edit`) so an
+    -- unsaved buffer in the destination can't block the jump with E37.
+    local dest = api.nvim_get_current_win()
+    if dest == qf_win then
+        return
+    end
+    api.nvim_win_set_buf(dest, entry.bufnr)
+    if scratch and scratch ~= entry.bufnr and api.nvim_buf_is_valid(scratch) then
+        pcall(api.nvim_buf_delete, scratch, { force = false })
+    end
     local lnum = (entry.lnum and entry.lnum > 0) and entry.lnum or 1 -- a file pick has lnum 0 → top of file
-    pcall(api.nvim_win_set_cursor, 0, { lnum, math.max(0, (entry.col or 1) - 1) })
-    vim.cmd("normal! zz")
+    pcall(api.nvim_win_set_cursor, dest, { lnum, math.max(0, (entry.col or 1) - 1) })
+    pcall(api.nvim_win_call, dest, function()
+        vim.cmd("normal! zz")
+    end)
 end
 
 --- Sync each entry's `text` field to its displayed SOURCE LINE. The renderer shows the source line via
