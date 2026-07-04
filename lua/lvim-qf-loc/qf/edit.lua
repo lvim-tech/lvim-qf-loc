@@ -766,7 +766,15 @@ local function open_entry(qbuf, owner_win, mode)
         -- (`aboveleft split` of the quickfix is E36 — its height is winfixheight-locked — and loading the file
         -- into the quickfix window itself would clobber the list, which was the reported bug. `topleft new` takes
         -- room from a FLEXIBLE window instead.)
-        local target = (is_normal(owner_win) and owner_win) or fallback_win()
+        -- Host the file in the window the user came into the quickfix FROM: its LIVE alternate (`winnr("#")`,
+        -- the window focused just before this jump). `owner_win` — captured ONCE when the list was built — is only
+        -- a fallback, because it goes STALE: after navigating between windows and back it can point to a CLOSED
+        -- window, which then fell through to the arbitrary FIRST window (the reported wrong-split). Then any normal
+        -- window; then (handled below) a fresh split.
+        local alt = vim.fn.win_getid(vim.fn.winnr("#"))
+        local target = (alt ~= qf_win and is_normal(alt) and alt)
+            or (is_normal(owner_win) and owner_win)
+            or fallback_win()
         if target then
             api.nvim_set_current_win(target)
             if mode == "vsplit" then
