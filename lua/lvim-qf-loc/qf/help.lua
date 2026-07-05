@@ -1,6 +1,6 @@
 -- lua/lvim-qf-loc/qf/help.lua
 -- The quickfix keymap CHEATSHEET — the canonical lvim-tech help window (reference: lvim-lsp's outline
--- `show_help`): a read-only `lvim-utils.ui.surface` float of full-width, column-aligned rows, each row a KEY
+-- `show_help`): a read-only `lvim-ui.surface` float of full-width, column-aligned rows, each row a KEY
 -- box + a DESCRIPTION box, striped blue (odd) / yellow (even), every box a tint of its accent (key 0.4,
 -- description 0.2 — the tint canon). The hardware cursor is hidden; the row under the (hidden) cursor brightens
 -- its description box to 0.4 so the whole row reads as one solid tint.
@@ -37,7 +37,7 @@ end
 
 --- Open the cheatsheet float for the quickfix keys.
 function M.show()
-    local ok_frame, frame = pcall(require, "lvim-utils.ui.surface")
+    local ok_frame, frame = pcall(require, "lvim-ui.surface")
     local ok_hl, uhl = pcall(require, "lvim-utils.highlight")
     local ok_c, C = pcall(require, "lvim-utils.colors")
     if not (ok_frame and ok_hl and ok_c and C.blue) then

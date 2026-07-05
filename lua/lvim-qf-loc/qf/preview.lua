@@ -71,12 +71,12 @@ function M.setup()
 end
 
 --- The PREVIEW float's own border, resolved from `config.preview.border` (the title-canon top " " edge that
---- carries the centered border-title). It is run through `lvim-utils.ui.util.resolve_border` (the chassis
+--- carries the centered border-title). It is run through `lvim-ui.util.resolve_border` (the chassis
 --- normalizer) because the padded representation — empty corners between " " edges — is rejected by
 --- `nvim_open_win` directly. Falls back to a plain "rounded" string when lvim-utils is absent.
 ---@return string|string[]
 local function preview_border()
-    local ok, util = pcall(require, "lvim-utils.ui.util")
+    local ok, util = pcall(require, "lvim-ui.util")
     if ok and util.resolve_border then
         return util.resolve_border(config.preview.border)
     end

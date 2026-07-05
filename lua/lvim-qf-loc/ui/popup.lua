@@ -1,5 +1,5 @@
 -- lua/lvim-qf-loc/ui/popup.lua
--- The LvimQf / LvimLoc MANAGEMENT popup — a tabbed menu (lvim-utils.ui.tabs in `menu` mode, so each tab's rows
+-- The LvimQf / LvimLoc MANAGEMENT popup — a tabbed menu (lvim-ui.tabs in `menu` mode, so each tab's rows
 -- are a navigable BODY list) over the stored quickfix / location lists. Three tabs:
 --   Browse  — every stored list; pick one → switch to it (relative `:cnewer`/`:colder`) + open the live-preview
 --             browser of its entries

@@ -20,7 +20,7 @@ function M.get()
     if instance then
         return instance
     end
-    local ok, mod = pcall(require, "lvim-utils.ui")
+    local ok, mod = pcall(require, "lvim-ui")
     if not ok then
         return nil
     end
