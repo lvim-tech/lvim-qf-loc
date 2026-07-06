@@ -52,10 +52,12 @@ end
 ---@param win? integer
 ---@return string?
 M.title = function(list, id, win)
+    -- Ask ONLY for the title (`title = 0` is the request flag) — never `all = 1`, which copies every stored
+    -- item into Lua just to read one string (the DiagnosticChanged reload calls this per list, per tick).
     if list == "quick_fix" then
-        return vim.fn.getqflist({ nr = id, all = 1 })["title"]
+        return vim.fn.getqflist({ nr = id, title = 0 })["title"]
     elseif list == "loc" then
-        return vim.fn.getloclist(win or 0, { nr = id, all = 1 })["title"]
+        return vim.fn.getloclist(win or 0, { nr = id, title = 0 })["title"]
     end
 end
 

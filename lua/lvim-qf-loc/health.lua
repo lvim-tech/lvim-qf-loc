@@ -10,10 +10,10 @@ local config = require("lvim-qf-loc.config")
 local M = {}
 
 local health = vim.health
-local start = health.start or health.report_start
-local ok = health.ok or health.report_ok
-local warn = health.warn or health.report_warn
-local info = health.info or health.report_info
+local start = health.start
+local ok = health.ok
+local warn = health.warn
+local info = health.info
 
 --- Run the health checks.
 function M.check()

@@ -286,29 +286,53 @@ local function dim_group(group)
     return name
 end
 
---- Apply the file's treesitter highlights to one rendered row. `dim` (context rows) routes every capture
---- through its dimmed copy, so the code stays coloured but muted. Returns whether treesitter was applicable
---- (so the caller can fall back to a flat colour when a file has no grammar).
+--- The treesitter context for a source buffer — `{ lang, parser, query }` — resolved ONCE per render and
+--- memoised in `cache` (keyed by bufnr; `false` = no usable grammar). Hoisting this out of the per-row loop
+--- means each source is parsed once per render, not re-resolved (get_parser + query.get + lang lookup) for
+--- every one of its rows — the hot path when a big list (or the live Diagnostics list) re-renders.
+---@param cache table<integer, table|false>
+---@param bufnr integer?
+---@return table|false ctx  { lang: string, parser: vim.treesitter.LanguageTree, query: vim.treesitter.Query }
+local function ts_ctx(cache, bufnr)
+    if not (bufnr and bufnr > 0) then
+        return false
+    end
+    local hit = cache[bufnr]
+    if hit ~= nil then
+        return hit
+    end
+    ---@type table|false
+    local ctx = false
+    if api.nvim_buf_is_valid(bufnr) then
+        local lang = lang_for(api.nvim_buf_get_name(bufnr))
+        if lang then
+            local ok, parser = pcall(vim.treesitter.get_parser, bufnr, lang)
+            local query = vim.treesitter.query.get(lang, "highlights")
+            if ok and parser and query then
+                ctx = { lang = lang, parser = parser, query = query }
+            end
+        end
+    end
+    cache[bufnr] = ctx
+    return ctx
+end
+
+--- Apply the file's treesitter highlights to one rendered row, using the pre-resolved `ctx` for its source
+--- buffer (`ts_ctx`). `dim` (context rows) routes every capture through its dimmed copy, so the code stays
+--- coloured but muted. Returns whether treesitter was applicable (so the caller can fall back to a flat colour
+--- when a file has no grammar).
 ---@param qbuf integer
 ---@param i integer  1-based row
 ---@param e table
 ---@param qline string  the rendered (source) line
 ---@param dim boolean
+---@param ctx table|false  the row's source treesitter context, from `ts_ctx`
 ---@return boolean applied
-local function highlight_line(qbuf, i, e, qline, dim)
-    local bufnr = e.bufnr
-    if not (bufnr and bufnr > 0 and api.nvim_buf_is_valid(bufnr) and e.lnum and e.lnum > 0) then
+local function highlight_line(qbuf, i, e, qline, dim, ctx)
+    if not ctx or not (e.lnum and e.lnum > 0) then
         return false
     end
-    local lang = lang_for(api.nvim_buf_get_name(bufnr))
-    if not lang then
-        return false
-    end
-    local ok, parser = pcall(vim.treesitter.get_parser, bufnr, lang)
-    local query = vim.treesitter.query.get(lang, "highlights")
-    if not (ok and parser and query) then
-        return false
-    end
+    local lang, parser, query = ctx.lang, ctx.parser, ctx.query
     local row, maxc = e.lnum - 1, #qline
     local okp, trees = pcall(function()
         return parser:parse({ row, row + 1 })
@@ -317,7 +341,7 @@ local function highlight_line(qbuf, i, e, qline, dim)
         return true -- treesitter applies; this row just failed to parse — don't fall back to a flat colour
     end
     for _, tree in ipairs(trees) do
-        for id, node in query:iter_captures(tree:root(), bufnr, row, row + 1) do
+        for id, node in query:iter_captures(tree:root(), e.bufnr, row, row + 1) do
             local sr, sc, er, ec = node:range()
             if sr == row then -- only this row; clamp to the qf line's bytes
                 local c0 = math.min(sc, maxc)
@@ -348,11 +372,12 @@ local function apply_source_highlights(qbuf, items)
         return
     end
     local qlines = api.nvim_buf_get_lines(qbuf, 0, -1, false)
+    local tcache = {} -- bufnr → treesitter context, resolved once per render (see ts_ctx)
     for i, e in ipairs(items) do
         local qline = qlines[i]
         if qline and qline ~= "" then
             local is_ctx = e.valid == 0
-            if not highlight_line(qbuf, i, e, qline, is_ctx) and is_ctx then
+            if not highlight_line(qbuf, i, e, qline, is_ctx, ts_ctx(tcache, e.bufnr)) and is_ctx then
                 -- a context line from a file with no treesitter grammar → one flat muted colour
                 pcall(api.nvim_buf_set_extmark, qbuf, NS_SYNTAX, i - 1, 0, {
                     end_col = #qline,

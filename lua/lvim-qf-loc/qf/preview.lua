@@ -207,19 +207,19 @@ function M.update(entry, qwin)
     then
         buf = entry.bufnr
         pcall(vim.fn.bufload, buf)
-        -- make the preview SYNTAX-HIGHLIGHTED: ensure the buffer has its filetype, then start treesitter (with
-        -- a syntax fallback). A file opened only via bufload may have neither, so the content shows plain.
-        if vim.bo[buf].filetype == "" then
+        -- Syntax-highlight the preview WITHOUT mutating the real buffer. Setting `filetype` here fires the whole
+        -- FileType chain (ftplugin, indent, LSP auto-attach) and syntax engine on a file the user never opened,
+        -- and it PERSISTS after the preview closes. Instead resolve the grammar from the file NAME and start
+        -- treesitter for it directly — visual-only, no autocmds. A grammarless file previews plain (no syntax
+        -- fallback). Guarded by the active-highlighter table so scrolling the list doesn't re-create it per move.
+        if not vim.treesitter.highlighter.active[buf] then
             local ft = vim.filetype.match({ buf = buf })
                 or vim.filetype.match({ filename = api.nvim_buf_get_name(buf) })
-            if ft and ft ~= "" then
-                vim.bo[buf].filetype = ft
+                or ""
+            local lang = ft ~= "" and (vim.treesitter.language.get_lang(ft) or ft) or nil
+            if lang and vim.treesitter.query.get(lang, "highlights") then
+                pcall(vim.treesitter.start, buf, lang)
             end
-        end
-        if not pcall(vim.treesitter.start, buf) and vim.bo[buf].syntax == "" and vim.bo[buf].filetype ~= "" then
-            pcall(function()
-                vim.bo[buf].syntax = vim.bo[buf].filetype
-            end)
         end
     else
         if not (scratch and api.nvim_buf_is_valid(scratch)) then

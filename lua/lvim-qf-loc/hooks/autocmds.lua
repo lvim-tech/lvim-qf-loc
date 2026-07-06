@@ -10,10 +10,6 @@
 local config = require("lvim-qf-loc.config")
 local diagnostics = require("lvim-qf-loc.core.diagnostics")
 
-local group = vim.api.nvim_create_augroup("Lvimqfloc", {
-    clear = true,
-})
-
 local M = {}
 
 --- Size the quickfix window to fit its content, clamped to `[minheight, maxheight]`. The native editable view
@@ -30,9 +26,12 @@ local function qf_height(minheight, maxheight)
     vim.cmd(height .. "wincmd _")
 end
 
---- Register the plugin's autocommands (idempotent within the shared augroup).
+--- Register the plugin's autocommands. Idempotent: the augroup is (re)created with `clear = true` on every
+--- call, so a repeated `setup()` REPLACES the autocmds instead of stacking duplicate DiagnosticChanged /
+--- height handlers onto the same group.
 ---@return nil
 M.init = function()
+    local group = vim.api.nvim_create_augroup("Lvimqfloc", { clear = true })
     -- Keep the live "Diagnostics" quickfix list in sync with the diagnostics. Its id is captured so shutdown
     -- can delete EXACTLY this autocmd (never guessing an index in the group).
     local diag_id = vim.api.nvim_create_autocmd({

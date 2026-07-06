@@ -74,10 +74,13 @@ function M.show()
             local lines, hls = {}, {}
             for i, r in ipairs(items) do
                 local s = (i % 2 == 1) and "B" or "Y" -- odd = blue, even = yellow
+                -- Pad to DISPLAY cells (strdisplaywidth), not bytes: a multibyte configured key/description would
+                -- otherwise under-pad and break the column alignment + the tint stripe. The highlight ranges below
+                -- stay byte offsets (`#kcell` / `#lines[i]`) — extmark columns are byte-based, so those are correct.
                 local kcell = "  " .. r[1]
-                kcell = kcell .. string.rep(" ", math.max(0, keybox - #kcell))
+                kcell = kcell .. string.rep(" ", math.max(0, keybox - vim.fn.strdisplaywidth(kcell)))
                 local dcell = "  " .. r[2]
-                dcell = dcell .. string.rep(" ", math.max(0, width - keybox - #dcell))
+                dcell = dcell .. string.rep(" ", math.max(0, width - keybox - vim.fn.strdisplaywidth(dcell)))
                 lines[i] = kcell .. dcell
                 local desc = (i == cur) and ("LvimQfLocHelpDescActive" .. s) or ("LvimQfLocHelpDesc" .. s)
                 hls[#hls + 1] = { i - 1, 0, #kcell, "LvimQfLocHelpKey" .. s }

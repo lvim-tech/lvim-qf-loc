@@ -26,16 +26,19 @@ end
 --- Refresh the existing "Diagnostics" quickfix list (if any) with the current diagnostics — in place, so its
 --- list number / position are preserved. Called from the DiagnosticChanged / DirChanged autocmd.
 M.diagnostics_reload = function()
+    -- Gate on the flag `qf_diagnostics` sets (and `delete_tab` clears): with no live Diagnostics list there is
+    -- nothing to refresh, so a DiagnosticChanged tick while editing with LSP must NOT walk the whole qf history.
+    if not state.is_active then
+        return
+    end
     local len = utils.length("quick_fix")
     for i = 1, len do
         if utils.title("quick_fix", i) == "Diagnostics" then
             local qfdiags = vim.diagnostic.toqflist(vim.diagnostic.get())
             table.sort(qfdiags, compare_by_severity)
-            local qflist = vim.fn.getqflist({ nr = i, all = 1 })
-            qflist.nr = i
-            qflist.title = "Diagnostics"
-            qflist.items = qfdiags
-            vim.fn.setqflist({}, "r", qflist)
+            -- Replace the list in place by its number — no `getqflist({ all = 1 })` first (that copied every
+            -- stored item into Lua only to overwrite `items`, `title` and `nr` anyway).
+            vim.fn.setqflist({}, "r", { nr = i, title = "Diagnostics", items = qfdiags })
             return
         end
     end

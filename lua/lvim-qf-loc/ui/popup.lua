@@ -100,7 +100,7 @@ local function delete_tab(kind, loclist_win)
                 local updated = {}
                 for j = 1, len do
                     if j ~= idx then
-                        table.insert(updated, utils.list_to_json(kind, j))
+                        table.insert(updated, utils.list_to_json(kind, j, loclist_win))
                     elseif kind == "quick_fix" and utils.title("quick_fix", j) == "Diagnostics" then
                         state.is_active = false
                     end
