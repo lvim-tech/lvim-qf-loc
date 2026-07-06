@@ -232,7 +232,8 @@ local function open(kind, tab_selector, loclist_win)
         title = title,
         tab_selector = tab_selector,
         menu = true, -- every tab is a navigable MENU: its action rows are a selectable BODY list, not footer chips
-        width = config.popup_global.width,
+        -- No explicit `width`: the tabs float sizes from the central lvim-utils float geometry
+        -- (`lvim-ui.size("float")`); a per-call width would override that single authority.
         footer_hints = true, -- bottom key-hint legend (panel keys • focused-row keys), like the control center
         tabs = {
             browse_tab(kind, loclist_win),

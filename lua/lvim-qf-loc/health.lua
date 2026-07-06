@@ -39,6 +39,14 @@ function M.check()
 
     -- the effective view + its dependency
     info("view = " .. tostring(config.view) .. "  (preview " .. (config.preview.enabled and "on" or "off") .. ")")
+
+    -- the area browser's dock-stack membership (applies ONLY to the picker-based browser; the native quickfix
+    -- window + the cursor-preview float are content-fit and never dock consumers)
+    info(
+        "browser dock_stack = "
+            .. tostring(config.dock.dock_stack)
+            .. (config.dock.dock_stack and "  (managed stack)" or "  (standalone)")
+    )
     if config.view == "area" and not has_utils then
         warn("view = 'area' needs lvim-utils; falling back to the native window.")
     end

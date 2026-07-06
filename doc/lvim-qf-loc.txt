@@ -146,6 +146,19 @@ per-severity icons.
 The Browse tab of the management popup lists every stored list; pick one to
 switch to it and open its entries in the browser.
 
+The browser is the ONLY dockable UI here. `config.dock.dock_stack` (default
+`true`) routes it through the lvim-utils dock STACK — a managed consumer, cyclable
+with `<Leader>n`/`<Leader>p`/`<Leader>x`/`<Leader>m` and `:LvimDock`, one visible
+per layout with no overlap. Set it `false` for a geometry-only standalone open
+(still centrally sized, just not registered in the stack). `config.dock.force`
+supplies per-layout ANCHORED geometry overrides, deep-merged per field over the
+global
+`lvim-utils.config.dock.geometry.<layout>`; an empty `{}` inherits the global.
+Each layout may carry `height`, `height_auto`, `backdrop`, `auto_hide`,
+`keep_focus`; `float` may ALSO carry `width`/`width_auto` — `area` and `bottom`
+are always full-width. Both apply ONLY to the browser; the native quickfix window
+and the cursor-preview float are content-fit and are NEVER dock consumers.
+
 ==============================================================================
 9. CONFIGURATION                                        *lvim-qf-loc-config*
 >lua
@@ -153,6 +166,16 @@ switch to it and open its entries in the browser.
       notify = true,
       cfilter = true,                  -- packadd :Cfilter / :Lfilter on setup
       view = "native",                 -- "native" | "area"
+
+      -- dock routing for the area browser (native qf + preview float are
+      -- content-fit and never dock consumers):
+      dock = {
+          dock_stack = true,           -- true = managed stack | false = standalone
+          -- per-layout ANCHORED geometry overrides for the browser, deep-merged
+          -- over the global lvim-utils dock geometry; empty {} inherits it. float
+          -- may also carry width/width_auto; area/bottom are always full-width.
+          force = { float = {}, area = {}, bottom = {} },
+      },
 
       preview = {                      -- (native view) floating preview
           enabled = true,
@@ -186,10 +209,9 @@ switch to it and open its entries in the browser.
           keys = { expand = "zo", collapse = "zc", toggle = "" },
       },
 
-      browser = {                      -- the area browser
+      browser = {                      -- the area browser (slot height is central, no size here)
           layout = "area",
           preview_side = "above",      -- "above" | "below" | "right" | "left"
-          height = { horizontal = 0.33, vertical = 0.66 },
           icons = { E = "󰅚 ", W = "󰀪 ", I = " ", N = " ", H = " ", default = " " },
       },
   })

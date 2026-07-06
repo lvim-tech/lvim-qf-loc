@@ -142,6 +142,23 @@ require("lvim-qf-loc").setup({
     min_height = 1,
     max_height = 15,
 
+    -- Dock routing for the area BROWSER only (the native quickfix window and the
+    -- cursor-preview float are content-fit and never dock consumers):
+    dock = {
+        -- Dock STACK membership:
+        --   true  — managed dock-STACK consumer (cyclable <Leader>n/p/x/m, :LvimDock,
+        --           one-visible-per-layout, no overlap)
+        --   false — geometry-only: still centrally sized, but opens standalone (not in the stack)
+        dock_stack = true,
+
+        -- Per-layout ANCHORED geometry overrides for the browser, deep-merged per field over the
+        -- global lvim-utils dock geometry; empty {} inherits it. Each layout may carry height,
+        -- height_auto, backdrop = { enabled, mode, dim = { amount }, darken = { amount } },
+        -- auto_hide, keep_focus. float may ALSO carry width / width_auto; area and bottom are
+        -- always full-width.
+        force = { float = {}, area = {}, bottom = {} },
+    },
+
     -- packadd Neovim's built-in cfilter on setup, so :Cfilter / :Lfilter are available
     cfilter = true,
 
@@ -185,11 +202,10 @@ require("lvim-qf-loc").setup({
         keys = { expand = "zo", collapse = "zc", toggle = "" },
     },
 
-    -- the area browser
+    -- the area browser (its slot height comes from the central lvim-utils dock geometry — no size here)
     browser = {
         layout = "area", -- "area" | "float" | "bottom"
         preview_side = "above", -- "above" | "below" | "right" | "left" (rotate live with <C-n>/<C-p>)
-        height = { horizontal = 0.33, vertical = 0.66 },
         icons = { E = "󰅚 ", W = "󰀪 ", I = " ", N = " ", H = " ", default = " " },
     },
 
@@ -200,12 +216,11 @@ require("lvim-qf-loc").setup({
         storage = { icon = "󰆼" },
     },
 
-    -- Passed directly to lvim-utils ui.new() — overrides size, keys, icons, highlights, etc.
-    -- (The frame border follows the single shared lvim-utils `config.ui.border`.)
+    -- Passed directly to lvim-utils ui.new() — overrides keys, icons, highlights, etc. (NOT size: the
+    -- management popup sizes from the central lvim-utils float geometry. The frame border follows the
+    -- single shared lvim-utils `config.ui.border`.)
     popup_global = {
         position = "editor",
-        width = 0.9,
-        height = 0.8,
 
         icons = {
             action = "",

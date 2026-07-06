@@ -98,13 +98,21 @@ function M.open(loclist_win, layout)
     picker.open({
         title = loclist_win and "Location List" or "Quickfix",
         layout = layout or config.browser.layout,
+        -- Forward OUR dock config to the picker per-call: `dock_stack` decides managed-stack vs. standalone, and
+        -- `force` supplies the per-layout ANCHORED geometry overrides (deep-merged over the central dock geometry
+        -- inside `dock.slot`). Both apply ONLY to this picker-based browser — the native qf window and the
+        -- cursor-preview float stay content-fit and are untouched.
+        dock_stack = config.dock.dock_stack,
+        force = config.dock.force,
         items = items,
         format = function(it)
             return it.text
         end,
         preview_file = true, -- the REAL file buffer in the preview (the bqf feature) — no FFI / magicwin
         preview_side = config.browser.preview_side, -- "above" → preview on top, list full-width below
-        preview_heights = config.browser.height, -- { horizontal, vertical } area heights per stack direction
+        -- No `preview_heights`: the SLOT height of the picker's float/area/bottom dock is centralized by
+        -- lvim-utils (`config.dock.geometry`). Passing our own would duplicate it, so we let the picker/surface
+        -- derive it — this browser only chooses the layout and the preview SIDE, never the size.
         subtitle = function(it)
             return vim.fn.fnamemodify(it.path, ":t")
         end,

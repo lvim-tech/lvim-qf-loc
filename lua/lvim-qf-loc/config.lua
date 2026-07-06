@@ -39,11 +39,20 @@
 ---@class LvimQfLocBrowserConfig
 ---@field layout       "area"|"float"|"bottom"  Where the browser opens.
 ---@field preview_side "above"|"below"|"right"|"left"  Where the file preview sits relative to the entry list.
----@field height       table                    Area height per stack direction: `{ horizontal, vertical }`.
 ---@field icons        table<string,string>     Entry `type` → its leading icon (E/W/I/N/H + `default`).
+
+---@class LvimQfLocForce
+---@field float  table  Per-open ANCHORED geometry override for the FLOAT layout (height/height_auto/width/width_auto/backdrop/auto_hide/keep_focus); `{}` = inherit the global.
+---@field area   table  Per-open ANCHORED geometry override for the AREA layout (always full-width — no width/width_auto); `{}` = inherit the global.
+---@field bottom table  Per-open ANCHORED geometry override for the BOTTOM layout (always full-width — no width/width_auto); `{}` = inherit the global.
+
+---@class LvimQfLocDock
+---@field dock_stack boolean         Route the area BROWSER through the managed dock STACK (cyclable, one-visible-per-layout) vs. a standalone open.
+---@field force      LvimQfLocForce  Per-layout ANCHORED geometry overrides for the browser, deep-merged over the global `lvim-utils.config.dock.geometry`.
 
 ---@class LvimQfLocConfig
 ---@field notify       boolean                 Emit notifications (vim.notify) for list navigation / errors.
+---@field dock         LvimQfLocDock           Dock routing for the area BROWSER: managed-stack membership + per-layout geometry overrides.
 ---@field min_height   integer                 Minimum quickfix window height (rows).
 ---@field max_height   integer                 Maximum quickfix window height (rows).
 ---@field cfilter      boolean                 `packadd` Neovim's built-in `cfilter` on setup (`:Cfilter`/`:Lfilter`).
@@ -53,13 +62,33 @@
 ---@field context      LvimQfLocContextConfig  Context expand/collapse (source lines around each entry).
 ---@field browser      LvimQfLocBrowserConfig  The quickfix / location browser in the lvim-utils area.
 ---@field tabs         table<string,table>     Management-popup tab icons (`browse`/`delete`/`storage`).
----@field popup_global table                   Options passed to the lvim-utils UI instance (size/keys/icons/labels).
+---@field popup_global table                   Options passed to the lvim-utils UI instance (keys/icons/labels — NOT size; the surface derives its slot from the central lvim-utils geometry).
 
 ---@type LvimQfLocConfig
 return {
     notify = true,
     min_height = 1,
     max_height = 15,
+
+    -- DOCK routing for the area BROWSER (qf/browser.lua, opened through the lvim-picker). Applies ONLY to that
+    -- picker-based browser — the native quickfix window and the cursor-preview float are content-fit and are NOT
+    -- dock consumers, so this never touches them.
+    dock = {
+        -- DOCK STACK membership:
+        --   true  — full dock-STACK consumer: managed by lvim-utils.dock (cyclable <Leader>n/p/x/m, :LvimDock,
+        --           one-visible-per-layout, no overlap; parks any other visible consumer in the same layout).
+        --   false — geometry-only: still sized centrally (dock.slot + `force` below), but opens STANDALONE, not
+        --           in the stack.
+        dock_stack = true,
+
+        -- Per-layout ANCHORED geometry overrides for the browser, deep-merged PER FIELD over the global
+        -- `lvim-utils.config.dock.geometry.<layout>`; an empty `{}` inherits the global unchanged. Each layout
+        -- may carry: `height`, `height_auto`, `backdrop = { enabled, mode, dim = { amount }, darken = { amount }
+        -- }`, `auto_hide`, `keep_focus`. FLOAT may ALSO carry `width` / `width_auto`; `area` and `bottom` are
+        -- ALWAYS full-width, so any width/width_auto set on them is ignored. Forwarded to `picker.open` as
+        -- `force`, which feeds `force[layout]` to `dock.slot` as the per-open override.
+        force = { float = {}, area = {}, bottom = {} },
+    },
 
     -- Load Neovim's built-in `cfilter` plugin on setup, so `:Cfilter` / `:Lfilter` (filter the quickfix /
     -- location list to entries matching, or with `!` not matching, a pattern) are available — they pair
@@ -134,13 +163,10 @@ return {
         -- "left". The preview is the real file buffer (editable); enter it with the panel-nav keys to edit.
         -- `<C-n>` / `<C-p>` rotate it through the four sides live.
         preview_side = "above",
-        -- The area's height for each stack direction: `horizontal` when the preview is left/right (side-by-side),
-        -- `vertical` when it is above/below (stacked — usually taller, so both panels get room). A value ≤ 1 is a
-        -- fraction of the screen height; > 1 an absolute row count.
-        height = {
-            horizontal = 0.33,
-            vertical = 0.66,
-        },
+        -- No `height` here on purpose: the browser opens through the lvim-picker (a 3-layout float/area/bottom
+        -- dock consumer), and the SLOT geometry of those layouts is owned centrally by lvim-utils
+        -- (`config.dock.geometry`, surfaced by the picker's own `preview_heights`). The browser passes NO size,
+        -- so the surface derives it from the single authority — every dock consumer lands in the identical rect.
         -- entry `type` → its leading icon (E/W/I/N/H from diagnostic-sourced lists; `default` for plain rows).
         icons = {
             E = "󰅚 ",
@@ -160,11 +186,10 @@ return {
 
     popup_global = {
         position = "editor",
-        width = 0.9, -- fraction of the screen wide for the management popup
-        max_width = 0.8,
-        height = 0.8,
-        max_height = 0.8,
-        max_items = nil,
+        -- No size here (width/height/max_*): the management popup opens with `lvim-ui.tabs`, whose slot geometry
+        -- comes from the central lvim-utils float size (`lvim-ui.size("float")` → `config.dock.geometry.float`).
+        -- `lvim-ui.new` explicitly ignores size from the instance defaults, so passing it here is a duplicate.
+        max_items = nil, -- content-fit list cap (NOT a slot size) — kept; nil = no cap
         close_keys = { "q", "<Esc>" },
         markview = false,
 
