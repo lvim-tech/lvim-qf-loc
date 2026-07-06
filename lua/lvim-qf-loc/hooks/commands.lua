@@ -64,8 +64,10 @@ local function register(name, kind)
         fn()
     end, {
         nargs = "?",
-        complete = function()
-            return keys
+        complete = function(arglead)
+            return vim.tbl_filter(function(k)
+                return vim.startswith(k, arglead)
+            end, keys)
         end,
     })
 end

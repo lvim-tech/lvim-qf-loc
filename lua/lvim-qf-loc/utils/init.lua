@@ -24,35 +24,38 @@ end
 
 --- The number of lists in the quickfix or location-list history stack.
 ---@param list "quick_fix"|"loc"
+---@param win? integer
 ---@return integer?
-M.length = function(list)
+M.length = function(list, win)
     if list == "quick_fix" then
         return vim.fn.getqflist({ nr = "$" })["nr"]
     elseif list == "loc" then
-        return vim.fn.getloclist(0, { nr = "$" })["nr"]
+        return vim.fn.getloclist(win or 0, { nr = "$" })["nr"]
     end
 end
 
 --- The 1-based index of the CURRENT list in the quickfix / location-list history stack.
 ---@param list "quick_fix"|"loc"
+---@param win? integer
 ---@return integer?
-M.current = function(list)
+M.current = function(list, win)
     if list == "quick_fix" then
         return vim.fn.getqflist({ nr = 0 })["nr"]
     elseif list == "loc" then
-        return vim.fn.getloclist(0, { nr = 0 })["nr"]
+        return vim.fn.getloclist(win or 0, { nr = 0 })["nr"]
     end
 end
 
 --- The title of list number `id` in the quickfix / location-list history stack.
 ---@param list "quick_fix"|"loc"
 ---@param id integer
+---@param win? integer
 ---@return string?
-M.title = function(list, id)
+M.title = function(list, id, win)
     if list == "quick_fix" then
         return vim.fn.getqflist({ nr = id, all = 1 })["title"]
     elseif list == "loc" then
-        return vim.fn.getloclist(0, { nr = id, all = 1 })["title"]
+        return vim.fn.getloclist(win or 0, { nr = id, all = 1 })["title"]
     end
 end
 
@@ -79,13 +82,14 @@ end
 --- The JSON-safe form of list number `id` (title + path-resolved items), ready for `write_file`.
 ---@param list "quick_fix"|"loc"
 ---@param id integer
+---@param win? integer
 ---@return table
-M.list_to_json = function(list, id)
+M.list_to_json = function(list, id, win)
     local list_content
     if list == "quick_fix" then
         list_content = vim.fn.getqflist({ nr = id, all = 1 })
     elseif list == "loc" then
-        list_content = vim.fn.getloclist(0, { nr = id, all = 1 })
+        list_content = vim.fn.getloclist(win or 0, { nr = id, all = 1 })
     end
     return M.list_fix(list_content)
 end
@@ -101,11 +105,11 @@ M.read_file = function(file)
     if not file_content_ok then
         return nil
     end
-    if type(content) == "table" then
-        return vim.fn.json_decode(content)
-    else
+    if type(content) ~= "table" then
         return nil
     end
+    local ok, decoded = pcall(vim.json.decode, table.concat(content, "\n"))
+    return ok and decoded or nil
 end
 
 --- Write `content` to a file (a table is JSON-encoded first). Silently no-ops when the file can't be opened.

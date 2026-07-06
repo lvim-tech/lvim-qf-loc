@@ -75,7 +75,8 @@ end
 local function valid_entries(items)
     local out = {}
     for _, e in ipairs(items) do
-        if e.valid == 1 and e.bufnr and e.bufnr > 0 then
+        local is_owned_context = type(e.user_data) == "table" and e.user_data.lvim_owner ~= nil
+        if not is_owned_context then
             out[#out + 1] = e
         end
     end

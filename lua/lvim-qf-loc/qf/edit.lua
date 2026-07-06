@@ -794,6 +794,7 @@ local function open_entry(qbuf, owner_win, mode)
         return
     end
     api.nvim_win_set_buf(dest, entry.bufnr)
+    vim.bo[entry.bufnr].buflisted = true
     if scratch and scratch ~= entry.bufnr and api.nvim_buf_is_valid(scratch) then
         pcall(api.nvim_buf_delete, scratch, { force = false })
     end

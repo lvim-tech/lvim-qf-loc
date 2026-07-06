@@ -68,8 +68,13 @@ local function jump(it)
         return
     end
     local buf = vim.fn.bufadd(it.path)
-    vim.fn.bufload(buf)
+    local ok, err = pcall(vim.fn.bufload, buf)
+    if not ok then
+        vim.notify("lvim-qf-loc: cannot load " .. it.path .. ": " .. tostring(err), vim.log.levels.WARN)
+        return
+    end
     vim.api.nvim_win_set_buf(0, buf)
+    vim.bo[buf].buflisted = true
     pcall(vim.api.nvim_win_set_cursor, 0, { it.lnum or 1, math.max(0, (it.col or 1) - 1) })
     vim.cmd("normal! zz")
 end

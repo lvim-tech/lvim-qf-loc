@@ -28,6 +28,16 @@ local function spacer()
     return { type = "spacer", label = "" }
 end
 
+---@param cmd string
+---@param win? integer
+local function exec_for_list(cmd, win)
+    if win and vim.api.nvim_win_is_valid(win) then
+        vim.fn.win_execute(win, cmd)
+    else
+        vim.cmd(cmd)
+    end
+end
+
 -- ── tab builders ───────────────────────────────────────────────────────────
 
 --- Browse: list every stored quickfix/location list; choosing one switches to it (relative `:cnewer`/`:colder`)
@@ -36,13 +46,13 @@ end
 ---@param loclist_win integer?
 ---@return table tab
 local function browse_tab(kind, loclist_win)
-    local len = utils.length(kind)
-    local current_nr = utils.current(kind)
+    local len = utils.length(kind, loclist_win)
+    local current_nr = utils.current(kind, loclist_win)
     local newer = kind == "quick_fix" and "cnewer" or "lnewer"
     local older = kind == "quick_fix" and "colder" or "lolder"
     local rows = {}
     for i = 1, len do
-        local title = utils.title(kind, i)
+        local title = utils.title(kind, i, loclist_win)
         local label = i == current_nr and (title .. " (current)") or title
         local idx = i
         table.insert(rows, {
@@ -51,10 +61,10 @@ local function browse_tab(kind, loclist_win)
             run = function(_, close)
                 local diff = idx - current_nr
                 for _ = 1, diff do
-                    vim.cmd("silent " .. newer)
+                    exec_for_list("silent " .. newer, loclist_win)
                 end
                 for _ = 1, -diff do
-                    vim.cmd("silent " .. older)
+                    exec_for_list("silent " .. older, loclist_win)
                 end
                 close(false, nil)
                 require("lvim-qf-loc.qf.browser").open(loclist_win)
@@ -70,13 +80,14 @@ end
 --- Delete: remove a stored list. Deleting the CURRENT one closes its window first; deleting the "Diagnostics"
 --- list clears the active flag so the DiagnosticChanged reload stops tracking it.
 ---@param kind "quick_fix"|"loc"
+---@param loclist_win integer?
 ---@return table tab
-local function delete_tab(kind)
-    local len = utils.length(kind)
-    local current_nr = utils.current(kind)
+local function delete_tab(kind, loclist_win)
+    local len = utils.length(kind, loclist_win)
+    local current_nr = utils.current(kind, loclist_win)
     local rows = {}
     for i = 1, len do
-        local title = utils.title(kind, i)
+        local title = utils.title(kind, i, loclist_win)
         local label = i == current_nr and (title .. " (current)") or title
         local idx = i
         table.insert(rows, {
@@ -84,7 +95,7 @@ local function delete_tab(kind)
             label = label,
             run = function(_, close)
                 if idx == current_nr then
-                    vim.cmd("silent " .. (kind == "quick_fix" and "cclose" or "lclose"))
+                    exec_for_list("silent " .. (kind == "quick_fix" and "cclose" or "lclose"), loclist_win)
                 end
                 local updated = {}
                 for j = 1, len do
@@ -100,9 +111,9 @@ local function delete_tab(kind)
                         vim.fn.setqflist({}, " ", qf)
                     end
                 else
-                    vim.fn.setloclist(0, {}, "f")
+                    vim.fn.setloclist(loclist_win or 0, {}, "f")
                     for _, loc in ipairs(updated) do
-                        vim.fn.setloclist(0, {}, " ", loc)
+                        vim.fn.setloclist(loclist_win or 0, {}, " ", loc)
                     end
                 end
                 utils.notify("Deleted: " .. title)
@@ -119,9 +130,10 @@ end
 --- Storage: save all lists to / load them from a per-project JSON (`filename`), and show the cwd.
 ---@param kind "quick_fix"|"loc"
 ---@param filename string
+---@param loclist_win integer?
 ---@param setfn fun(list: table, action: string, what: table)  normalised qf/loc setter (window arg hidden)
 ---@return table tab
-local function storage_tab(kind, filename, setfn)
+local function storage_tab(kind, filename, loclist_win, setfn)
     return {
         name = "storage",
         label = "Storage",
@@ -131,7 +143,7 @@ local function storage_tab(kind, filename, setfn)
                 type = "action",
                 label = "Save",
                 run = function(_, close)
-                    local len = utils.length(kind)
+                    local len = utils.length(kind, loclist_win)
                     if len < 1 then
                         utils.notify("No " .. kind .. " lists to save")
                         close(false, nil)
@@ -139,7 +151,7 @@ local function storage_tab(kind, filename, setfn)
                     end
                     local data = {}
                     for i = 1, len do
-                        table.insert(data, utils.list_to_json(kind, i))
+                        table.insert(data, utils.list_to_json(kind, i, loclist_win))
                     end
                     utils.write_file(vim.fn.getcwd() .. "/" .. filename, data)
                     utils.notify("Saved to " .. filename)
@@ -212,7 +224,7 @@ local function open(kind, tab_selector, loclist_win)
         end
     else
         setfn = function(list, action, what)
-            return vim.fn.setloclist(0, list, action, what)
+            return vim.fn.setloclist(loclist_win or 0, list, action, what)
         end
     end
     local title = kind == "quick_fix" and "Quickfix" or "Location"
@@ -224,8 +236,8 @@ local function open(kind, tab_selector, loclist_win)
         footer_hints = true, -- bottom key-hint legend (panel keys • focused-row keys), like the control center
         tabs = {
             browse_tab(kind, loclist_win),
-            delete_tab(kind),
-            storage_tab(kind, filename, setfn),
+            delete_tab(kind, loclist_win),
+            storage_tab(kind, filename, loclist_win, setfn),
         },
         callback = function() end,
     })

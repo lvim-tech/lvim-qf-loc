@@ -1,7 +1,7 @@
 -- lua/lvim-qf-loc/hooks/autocmds.lua
 -- The plugin's autocommands, all under one augroup:
 --   • DiagnosticChanged / DirChanged → keep the live "Diagnostics" quickfix list fresh (diagnostics_reload).
---   • ExitPre / QuitPre             → tear down the diagnostics watcher so it can't fire mid-shutdown (when the
+--   • ExitPre                       → tear down the diagnostics watcher so it can't fire mid-shutdown (when the
 --                                     diagnostic subsystem is being dismantled and a reload would error).
 --   • FileType qf                   → size the quickfix window to fit its entries (min..max height).
 --
@@ -11,7 +11,7 @@ local config = require("lvim-qf-loc.config")
 local diagnostics = require("lvim-qf-loc.core.diagnostics")
 
 local group = vim.api.nvim_create_augroup("Lvimqfloc", {
-    clear = false,
+    clear = true,
 })
 
 local M = {}
@@ -46,10 +46,7 @@ M.init = function()
     })
     -- On shutdown, remove the diagnostics watcher so a DiagnosticChanged fired while the diagnostic subsystem is
     -- being torn down cannot trigger a reload against half-dismantled state.
-    vim.api.nvim_create_autocmd({
-        "ExitPre",
-        "QuitPre",
-    }, {
+    vim.api.nvim_create_autocmd("ExitPre", {
         callback = function()
             pcall(vim.api.nvim_del_autocmd, diag_id)
         end,
