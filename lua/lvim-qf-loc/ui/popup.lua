@@ -230,6 +230,7 @@ local function open(kind, tab_selector, loclist_win)
     local title = kind == "quick_fix" and "Quickfix" or "Location"
     instance.tabs({
         title = title,
+        title_pos = config.title_pos, -- alignment — ONE config value, same as the browser ("center" default)
         tab_selector = tab_selector,
         menu = true, -- every tab is a navigable MENU: its action rows are a selectable BODY list, not footer chips
         -- No explicit `width`: the tabs float sizes from the central lvim-utils float geometry

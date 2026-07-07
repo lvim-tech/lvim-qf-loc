@@ -5,8 +5,8 @@ and persist lists, plus a full quickfix workflow: a live **preview**, an **edita
 quickfix that writes back to your files, **context** expand/collapse, and a **browser**
 in the lvim-utils area. A self-contained replacement for nvim-bqf + quicker.nvim — crash-safe
 by design (no FFI, no "magicwin" scroll math, no delimiter parsing).
-Powered by [lvim-utils](https://github.com/lvim-tech/lvim-utils) (optional, falls back
-gracefully).
+Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
+[lvim-picker](https://github.com/lvim-tech/lvim-picker) (optional, falls back gracefully).
 
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://github.com/lvim-tech/lvim-qf-loc/blob/main/LICENSE)
 
@@ -18,7 +18,7 @@ gracefully).
 - Browse, delete and persist lists from a tabbed popup
 - Save and load lists to/from a per-project JSON file
 - Load diagnostics into the quickfix and browse them
-- Tabbed UI powered by [lvim-utils](https://github.com/lvim-tech/lvim-utils) (optional, falls back gracefully)
+- Tabbed UI powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) (optional, falls back gracefully)
 
 **Quickfix module** (replaces nvim-bqf + quicker.nvim):
 
@@ -39,14 +39,15 @@ gracefully).
 ## Requirements
 
 - Neovim 0.10+
-- [lvim-utils](https://github.com/lvim-tech/lvim-utils) _(optional — enables the tabbed UI, the area view and the browser)_
+- [lvim-ui](https://github.com/lvim-tech/lvim-ui) _(optional — enables the tabbed management popup)_
+- [lvim-picker](https://github.com/lvim-tech/lvim-picker) _(optional — enables the area view and the browser)_
 
 > Disable **nvim-bqf** and **quicker.nvim** if you use them — this plugin owns `quickfixtextfunc` and the
 > quickfix window, and the three would conflict. Run `:checkhealth lvim-qf-loc` to verify.
 
 ## Installation
 
-Requires Neovim >= 0.10 and [lvim-utils](https://github.com/lvim-tech/lvim-utils).
+Requires Neovim >= 0.10.
 
 ### lvim-installer (recommended)
 
@@ -58,35 +59,12 @@ Install and manage it from the LVIM package manager — open the **Plugins** tab
 
 lvim-installer installs plugins through Neovim's built-in `vim.pack`, so no external plugin manager is needed.
 
-### lazy.nvim
-
-```lua
-return {
-    "lvim-tech/lvim-qf-loc",
-    dependencies = { "lvim-tech/lvim-utils" },
-    config = function()
-        require("lvim-qf-loc").setup({})
-    end,
-}
-```
-
-### packer.nvim
-
-```lua
-use({
-    "lvim-tech/lvim-qf-loc",
-    requires = { "lvim-tech/lvim-utils" },
-    config = function()
-        require("lvim-qf-loc").setup({})
-    end,
-})
-```
-
 ### Native (vim.pack)
 
 ```lua
 vim.pack.add({
-    { src = "https://github.com/lvim-tech/lvim-utils" },
+    { src = "https://github.com/lvim-tech/lvim-ui" },
+    { src = "https://github.com/lvim-tech/lvim-picker" },
     { src = "https://github.com/lvim-tech/lvim-qf-loc" },
 })
 require("lvim-qf-loc").setup({})
@@ -139,6 +117,12 @@ matches what was shown (external changes are skipped, not clobbered).
 ```lua
 require("lvim-qf-loc").setup({
     notify = true,
+
+    -- Border-title alignment for the browser and the LvimQf/LvimLoc management popup —
+    -- layout-independent (float / area / bottom all the same). The title text itself stays
+    -- dynamic per list kind ("Quickfix" / "Location List").
+    title_pos = "center", -- "left" | "center" | "right"
+
     min_height = 1,
     max_height = 15,
 

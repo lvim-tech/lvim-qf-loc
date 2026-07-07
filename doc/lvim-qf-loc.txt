@@ -36,8 +36,9 @@ write is verified against the file before it is applied.
 2. REQUIREMENTS                                    *lvim-qf-loc-requirements*
 
   - Neovim 0.10+.
-  - lvim-utils (optional) — enables the tabbed UI, the "area" view and the
-    browser. The native view works without it.
+  - lvim-ui (optional) — enables the tabbed management popup.
+  - lvim-picker (optional) — enables the "area" view and the browser.
+    The native view works without either.
 
 Disable nvim-bqf and quicker.nvim: this plugin owns 'quickfixtextfunc' and the
 quickfix window, and the three would conflict. See |lvim-qf-loc-health|.
@@ -164,6 +165,10 @@ and the cursor-preview float are content-fit and are NEVER dock consumers.
 >lua
   require("lvim-qf-loc").setup({
       notify = true,
+      title_pos = "center",            -- browser + management-popup border-title
+                                       -- alignment: "left" | "center" | "right"
+                                       -- (layout-independent; the title TEXT stays
+                                       -- dynamic: "Quickfix" / "Location List")
       cfilter = true,                  -- packadd :Cfilter / :Lfilter on setup
       view = "native",                 -- "native" | "area"
 
@@ -222,7 +227,7 @@ User options are merged in place into the live config, so any module reading
 ==============================================================================
 10. HEALTH                                              *lvim-qf-loc-health*
 
-`:checkhealth lvim-qf-loc` reports the Neovim version, whether lvim-utils is
+`:checkhealth lvim-qf-loc` reports the Neovim version, whether lvim-picker is
 present (for the area view / browser), the effective `view`, and warns if
 another plugin (nvim-bqf / quicker.nvim) owns 'quickfixtextfunc' or is still
 loaded — the one real source of conflicts.

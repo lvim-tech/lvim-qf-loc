@@ -26,13 +26,13 @@ function M.check()
         warn("Neovim 0.10+ is recommended (inline virtual text + extmark editing).")
     end
 
-    -- lvim-utils: required by the area view + the browser (the popup, `:LvimQf browse` / `diagnostics`).
-    local has_utils = pcall(require, "lvim-utils.picker")
-    if has_utils then
-        ok("lvim-utils found (area view / browser available).")
+    -- lvim-picker: required by the area view + the browser (the popup, `:LvimQf browse` / `diagnostics`).
+    local has_picker = pcall(require, "lvim-picker")
+    if has_picker then
+        ok("lvim-picker found (area view / browser available).")
     else
         warn(
-            "lvim-utils not found — the area view and `:LvimQf browse` are unavailable; the native view "
+            "lvim-picker not found — the area view and `:LvimQf browse` are unavailable; the native view "
                 .. "(editable + preview) still works."
         )
     end
@@ -47,8 +47,8 @@ function M.check()
             .. tostring(config.dock.dock_stack)
             .. (config.dock.dock_stack and "  (managed stack)" or "  (standalone)")
     )
-    if config.view == "area" and not has_utils then
-        warn("view = 'area' needs lvim-utils; falling back to the native window.")
+    if config.view == "area" and not has_picker then
+        warn("view = 'area' needs lvim-picker; falling back to the native window.")
     end
 
     -- ownership of quickfixtextfunc — the real conflict source. We claim it; a foreign value means another

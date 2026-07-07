@@ -52,6 +52,7 @@
 
 ---@class LvimQfLocConfig
 ---@field notify       boolean                 Emit notifications (vim.notify) for list navigation / errors.
+---@field title_pos    "left"|"center"|"right" Border-title alignment for the browser + the management popup — every layout the same.
 ---@field dock         LvimQfLocDock           Dock routing for the area BROWSER: managed-stack membership + per-layout geometry overrides.
 ---@field min_height   integer                 Minimum quickfix window height (rows).
 ---@field max_height   integer                 Maximum quickfix window height (rows).
@@ -67,6 +68,11 @@
 ---@type LvimQfLocConfig
 return {
     notify = true,
+    -- Border-TITLE alignment ("left" | "center" | "right") for the browser (qf/browser.lua) and the
+    -- LvimQf/LvimLoc management popup — layout-independent (float / area / bottom all the same, centered by
+    -- default like the other lvim-tech panels). The title TEXT itself stays dynamic per list kind
+    -- ("Quickfix" / "Location List"), so only the alignment lives in the config.
+    title_pos = "center",
     min_height = 1,
     max_height = 15,
 

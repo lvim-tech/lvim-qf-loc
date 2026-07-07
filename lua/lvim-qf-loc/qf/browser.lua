@@ -3,7 +3,7 @@
 -- cursor) reimplemented on the lvim-utils stack: the list + a REAL-Neovim preview open in OUR area (the
 -- surface chassis, same zone as the pickers and the lsp navigation), NOT a native qf float and NOT bqf's
 -- FFI + "magicwin" window math (the brittle, crash-prone parts we deliberately drop). The list is the
--- lvim-utils.picker list — so it comes with fuzzy narrowing, the Tab mark dot, `<C-q>` → a new list, and the
+-- lvim-picker list — so it comes with fuzzy narrowing, the Tab mark dot, `<C-q>` → a new list, and the
 -- severity filter bar for free; this file just sources the rows from `getqflist`/`getloclist` and styles them.
 --
 ---@module "lvim-qf-loc.qf.browser"
@@ -84,9 +84,9 @@ end
 ---@param loclist_win integer?
 ---@param layout string?
 function M.open(loclist_win, layout)
-    local ok, picker = pcall(require, "lvim-utils.picker")
+    local ok, picker = pcall(require, "lvim-picker")
     if not ok then
-        notify("lvim-utils is required for the browser.", vim.log.levels.WARN)
+        notify("lvim-picker is required for the browser.", vim.log.levels.WARN)
         return
     end
     local items = build_items(loclist_win)
@@ -97,6 +97,7 @@ function M.open(loclist_win, layout)
 
     picker.open({
         title = loclist_win and "Location List" or "Quickfix",
+        title_pos = config.title_pos, -- alignment — ONE config value for every layout ("center" default)
         layout = layout or config.browser.layout,
         -- Forward OUR dock config to the picker per-call: `dock_stack` decides managed-stack vs. standalone, and
         -- `force` supplies the per-layout ANCHORED geometry overrides (deep-merged over the central dock geometry
