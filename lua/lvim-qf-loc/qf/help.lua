@@ -37,98 +37,17 @@ end
 
 --- Open the cheatsheet float for the quickfix keys.
 function M.show()
-    local ok_frame, frame = pcall(require, "lvim-ui.surface")
-    local ok_hl, uhl = pcall(require, "lvim-utils.highlight")
-    local ok_c, C = pcall(require, "lvim-utils.colors")
-    if not (ok_frame and ok_hl and ok_c and C.blue) then
+    local ok_ui, ui = pcall(require, "lvim-ui")
+    if not ok_ui then
         return
     end
-    local function mtint(color, t)
-        return uhl.blend(color, C.bg, t)
-    end
-    -- Key box = 0.4 (bold); description box = 0.2, rising to 0.4 on the ACTIVE row (whole-row solid tint).
-    api.nvim_set_hl(0, "LvimQfLocHelpKeyB", { fg = C.blue, bg = mtint(C.blue, 0.4), bold = true })
-    api.nvim_set_hl(0, "LvimQfLocHelpDescB", { fg = C.blue, bg = mtint(C.blue, 0.2) })
-    api.nvim_set_hl(0, "LvimQfLocHelpDescActiveB", { fg = C.blue, bg = mtint(C.blue, 0.4) })
-    api.nvim_set_hl(0, "LvimQfLocHelpKeyY", { fg = C.yellow, bg = mtint(C.yellow, 0.4), bold = true })
-    api.nvim_set_hl(0, "LvimQfLocHelpDescY", { fg = C.yellow, bg = mtint(C.yellow, 0.2) })
-    api.nvim_set_hl(0, "LvimQfLocHelpDescActiveY", { fg = C.yellow, bg = mtint(C.yellow, 0.4) })
-
-    local items = entries()
-    local kw, dw = 0, 0
-    for _, r in ipairs(items) do
-        kw = math.max(kw, vim.fn.strdisplaywidth(r[1]))
-        dw = math.max(dw, vim.fn.strdisplaywidth(r[2]))
-    end
-    local keybox = kw + 4 -- 2 spaces left of the key + key + ≥2 right — the fixed, aligned KEY column
-
-    local pan
-    local provider = {
-        hide_cursor = true,
-        size = function()
-            return keybox + dw + 4, #items
-        end,
-        render = function(width)
-            local cur = (pan and pan.win and api.nvim_win_is_valid(pan.win)) and api.nvim_win_get_cursor(pan.win)[1]
-                or 1
-            local lines, hls = {}, {}
-            for i, r in ipairs(items) do
-                local s = (i % 2 == 1) and "B" or "Y" -- odd = blue, even = yellow
-                -- Pad to DISPLAY cells (strdisplaywidth), not bytes: a multibyte configured key/description would
-                -- otherwise under-pad and break the column alignment + the tint stripe. The highlight ranges below
-                -- stay byte offsets (`#kcell` / `#lines[i]`) — extmark columns are byte-based, so those are correct.
-                local kcell = "  " .. r[1]
-                kcell = kcell .. string.rep(" ", math.max(0, keybox - vim.fn.strdisplaywidth(kcell)))
-                local dcell = "  " .. r[2]
-                dcell = dcell .. string.rep(" ", math.max(0, width - keybox - vim.fn.strdisplaywidth(dcell)))
-                lines[i] = kcell .. dcell
-                local desc = (i == cur) and ("LvimQfLocHelpDescActive" .. s) or ("LvimQfLocHelpDesc" .. s)
-                hls[#hls + 1] = { i - 1, 0, #kcell, "LvimQfLocHelpKey" .. s }
-                hls[#hls + 1] = { i - 1, #kcell, #lines[i], desc }
-            end
-            return lines, hls
-        end,
-        keys = function(_, p)
-            pan = p
-            api.nvim_create_autocmd("CursorMoved", {
-                buffer = p.buf,
-                callback = function()
-                    if p.refresh then
-                        p.refresh()
-                    end
-                end,
-            })
-        end,
-    }
-    local close = { "<Esc>", "q" }
-    if config.edit.keys and config.edit.keys.help then
+    local close = { "q", "<Esc>" }
+    if config.edit and config.edit.keys and config.edit.keys.help then
         close[#close + 1] = config.edit.keys.help
     end
-    frame.open({
-        mode = "float",
-        -- the help-window canon: a top " " edge ONLY (no ring) that carries the native, blue-tinted border-title
-        border = { "", " ", "", "", "", "", "", "" },
-        title = "QUICKFIX KEYMAPS",
-        panel_border = "none",
-        size = { width = { auto = true, max = 0.7 }, height = { auto = true, max = 0.7 } },
-        close_keys = close,
-        content = { blocks = { { id = "help", provider = provider } } },
-        footer = {
-            bars = {
-                {
-                    items = {
-                        {
-                            key = "q",
-                            name = "close",
-                            run = function(st)
-                                st.close()
-                            end,
-                        },
-                    },
-                },
-            },
-        },
-    })
+    -- The rows / striping / colours / window are the shared component's (`lvim-ui.help`); this module only
+    -- supplies the LIVE key rows.
+    ui.help({ title = "QUICKFIX KEYMAPS", items = entries(), close_keys = close })
 end
 
 return M
