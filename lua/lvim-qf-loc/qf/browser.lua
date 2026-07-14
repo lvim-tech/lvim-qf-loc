@@ -110,7 +110,7 @@ function M.open(loclist_win, layout)
             return it.text
         end,
         preview_file = true, -- the REAL file buffer in the preview (the bqf feature) — no FFI / magicwin
-        preview_side = config.browser.preview_side, -- "above" → preview on top, list full-width below
+        preview_side = config.browser.preview_side, -- "right" (default) | "left" | "dynamic" (peek float above)
         -- No `preview_heights`: the SLOT height of the picker's float/area/bottom dock is centralized by
         -- lvim-utils (`config.dock.geometry`). Passing our own would duplicate it, so we let the picker/surface
         -- derive it — this browser only chooses the layout and the preview SIDE, never the size.

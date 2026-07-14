@@ -38,7 +38,7 @@
 
 ---@class LvimQfLocBrowserConfig
 ---@field layout       "area"|"float"|"bottom"  Where the browser opens.
----@field preview_side "above"|"below"|"right"|"left"  Where the file preview sits relative to the entry list.
+---@field preview_side "right"|"left"|"dynamic"  Where the file preview sits: beside the list, or a peek float above it.
 ---@field icons        table<string,string>     Entry `type` → its leading icon (E/W/I/N/H + `default`).
 
 ---@class LvimQfLocForce
@@ -164,11 +164,12 @@ return {
     -- area, with a severity icon per entry. `layout` = "area" | "float" | "bottom".
     browser = {
         layout = "area",
-        -- Where the editable file PREVIEW sits relative to the entry list: "above" (default — preview on top,
-        -- the list spans the FULL width below so long paths + messages stay readable) | "below" | "right" |
-        -- "left". The preview is the real file buffer (editable); enter it with the panel-nav keys to edit.
-        -- `<C-n>` / `<C-p>` rotate it through the four sides live.
-        preview_side = "above",
+        -- Where the file PREVIEW sits relative to the entry list — the chassis' three positions: "right"
+        -- (default, like every other lvim-tech list) | "left" | "dynamic" (a peek FLOAT above the list, the
+        -- native-quickfix look). `<C-n>` / `<C-p>` rotate them live. Vertical DOCKED stacking (above/below) is
+        -- gone: the two panels then split the dock's rows and neither is readable — the float is the answer when
+        -- the preview needs the screen.
+        preview_side = "right",
         -- No `height` here on purpose: the browser opens through the lvim-picker (a 3-layout float/area/bottom
         -- dock consumer), and the SLOT geometry of those layouts is owned centrally by lvim-utils
         -- (`config.dock.geometry`, surfaced by the picker's own `preview_heights`). The browser passes NO size,
