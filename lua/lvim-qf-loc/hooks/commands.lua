@@ -11,6 +11,7 @@
 local popup = require("lvim-qf-loc.ui.popup")
 local nav = require("lvim-qf-loc.core.nav")
 local diagnostics = require("lvim-qf-loc.core.diagnostics")
+local config = require("lvim-qf-loc.config")
 
 local M = {}
 
@@ -51,7 +52,18 @@ local function register(name, kind)
     local keys = vim.tbl_keys(a)
     table.sort(keys)
     vim.api.nvim_create_user_command(name, function(opts)
-        local sub = opts.args ~= "" and opts.args or nil
+        -- A layout token (area|float|bottom) anywhere overrides `config.browser.layout` for this open — sticky
+        -- for the session (config is the live authority a command may override); the remaining word is the
+        -- subcommand (none → the Browse popup). So `:LvimQf float`, `:LvimQf diagnostics bottom` both work.
+        local LAYOUTS = { area = true, float = true, bottom = true }
+        local sub
+        for _, w in ipairs(opts.fargs) do
+            if LAYOUTS[w] then
+                config.browser.layout = w
+            elseif not sub then
+                sub = w
+            end
+        end
         if not sub then -- no subcommand → the popup on its first tab (Browse)
             popup.open(kind, nil, kind == "loc" and vim.api.nvim_get_current_win() or nil)
             return
@@ -63,11 +75,12 @@ local function register(name, kind)
         end
         fn()
     end, {
-        nargs = "?",
+        nargs = "*",
         complete = function(arglead)
+            local pool = vim.list_extend(vim.deepcopy(keys), { "area", "float", "bottom" })
             return vim.tbl_filter(function(k)
                 return vim.startswith(k, arglead)
-            end, keys)
+            end, pool)
         end,
     })
 end
