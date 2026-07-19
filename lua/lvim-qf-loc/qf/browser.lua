@@ -33,7 +33,7 @@ end
 ---@param loclist_win integer?  a window handle → that window's location list; nil → the quickfix list
 ---@return table[] items
 local function build_items(loclist_win)
-    local raw = loclist_win and vim.fn.getloclist(loclist_win, { items = 0, idx = 0 }).items
+    local raw = loclist_win and vim.fn.getloclist(loclist_win, { items = 0 }).items
         or vim.fn.getqflist({ items = 0 }).items
     local items = {}
     for _, e in ipairs(raw or {}) do

@@ -231,21 +231,27 @@ local function prefix_chunks(e, col_width, mid_width, has_sev, positioned, files
 end
 
 --- The treesitter language for a path (cached), or nil when there is no highlights query for it.
+--- Keyed by the resolved FILETYPE, not the path: the language is a pure function of the filetype, so
+--- caching per-path would grow without bound across a session that churns many files through grep
+--- lists, while per-filetype is bounded by the (small, finite) number of distinct filetypes seen.
 ---@type table<string, string|false>
 local _lang_cache = {}
 ---@param path string
 ---@return string?
 local function lang_for(path)
-    local cached = _lang_cache[path]
+    local ft = vim.filetype.match({ filename = path }) or ""
+    if ft == "" then
+        return nil
+    end
+    local cached = _lang_cache[ft]
     if cached ~= nil then
         return cached or nil
     end
-    local ft = vim.filetype.match({ filename = path }) or ""
-    local lang = ft ~= "" and (vim.treesitter.language.get_lang(ft) or ft) or false
+    local lang = vim.treesitter.language.get_lang(ft) or ft ---@type string|false
     if lang and not vim.treesitter.query.get(lang, "highlights") then
         lang = false
     end
-    _lang_cache[path] = lang
+    _lang_cache[ft] = lang
     return lang or nil
 end
 
@@ -695,16 +701,25 @@ local function apply(qbuf, loclist_win)
     end
 
     -- gather edits per file: changes[path] = { [lnum] = { new, orig, bufnr } }
-    local changes, conflicts = {}, {}
+    local changes, conflicts, conflicted = {}, {}, {}
     for _, m in ipairs(api.nvim_buf_get_extmarks(qbuf, NS, 0, -1, {})) do
         local id, lrow = m[1], m[2]
         local data = map[id]
         local new = lines[lrow + 1]
         if data and data.path ~= "" and new ~= nil and new ~= data.orig then
+            local key = data.path .. "\0" .. tostring(data.lnum)
             changes[data.path] = changes[data.path] or {}
             local prev = changes[data.path][data.lnum]
-            if prev and prev.new ~= new then
+            if conflicted[key] then
+                -- a third+ row for an already-conflicted line: never resurrect an edit for it
+                changes[data.path][data.lnum] = nil
+            elseif prev and prev.new ~= new then
+                -- two rows disagree on the same source line: report it AND drop the first edit, so the
+                -- warning ("conflicts: …") truthfully means the line was left untouched — not silently
+                -- written with whichever row happened to enumerate first.
                 conflicts[#conflicts + 1] = ("%s:%d"):format(data.path, data.lnum)
+                conflicted[key] = true
+                changes[data.path][data.lnum] = nil
             else
                 changes[data.path][data.lnum] = { new = new, orig = data.orig, bufnr = data.bufnr }
             end
@@ -1037,7 +1052,11 @@ function M.setup()
             if config.view == "area" then
                 local qwin = api.nvim_get_current_win()
                 local info = vim.fn.getloclist(0, { filewinid = 0 })
-                local loclist_win = (info.filewinid and info.filewinid ~= 0) and qwin or nil
+                -- For a location list, hand the browser the FILE window that owns it (info.filewinid),
+                -- NOT qwin: qwin is the qf window we close below, and getloclist(<closed win>) is empty —
+                -- which made every area-view :lopen report "List is empty". filewinid stays valid after
+                -- the qf window closes. 0 filewinid ⇒ this is a quickfix list ⇒ nil.
+                local loclist_win = (info.filewinid and info.filewinid ~= 0) and info.filewinid or nil
                 -- close the native qf window FIRST (force), then open the browser — so only the area UI remains
                 vim.schedule(function()
                     if api.nvim_win_is_valid(qwin) then
