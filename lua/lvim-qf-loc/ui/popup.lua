@@ -127,13 +127,22 @@ local function delete_tab(kind, loclist_win)
     return { name = "delete", label = "Delete", icon = tab_icon("delete"), rows = rows }
 end
 
---- Storage: save all lists to / load them from a per-project JSON (`filename`), and show the cwd.
+--- Project-local save path for a list kind, under the unified ".lvim/<plugin>/" namespace
+--- (".lvim/qf-loc/quickfix.json" / "loclist.json").
 ---@param kind "quick_fix"|"loc"
----@param filename string
+---@return { dir: string, file: string, label: string }
+local function save_paths(kind)
+    local dir = vim.fn.getcwd() .. "/.lvim/qf-loc"
+    local base = kind == "quick_fix" and "quickfix.json" or "loclist.json"
+    return { dir = dir, file = dir .. "/" .. base, label = ".lvim/qf-loc/" .. base }
+end
+
+--- Storage: save all lists to / load them from a per-project JSON, and show its path.
+---@param kind "quick_fix"|"loc"
 ---@param loclist_win integer?
 ---@param setfn fun(list: table, action: string, what: table)  normalised qf/loc setter (window arg hidden)
 ---@return table tab
-local function storage_tab(kind, filename, loclist_win, setfn)
+local function storage_tab(kind, loclist_win, setfn)
     return {
         name = "storage",
         label = "Storage",
@@ -153,8 +162,10 @@ local function storage_tab(kind, filename, loclist_win, setfn)
                     for i = 1, len do
                         table.insert(data, utils.list_to_json(kind, i, loclist_win))
                     end
-                    utils.write_file(vim.fn.getcwd() .. "/" .. filename, data)
-                    utils.notify("Saved to " .. filename)
+                    local p = save_paths(kind)
+                    vim.fn.mkdir(p.dir, "p")
+                    utils.write_file(p.file, data)
+                    utils.notify("Saved to " .. p.label)
                     close(false, nil)
                 end,
             },
@@ -162,7 +173,7 @@ local function storage_tab(kind, filename, loclist_win, setfn)
                 type = "action",
                 label = "Load",
                 run = function(_, close)
-                    local data = utils.read_file(vim.fn.getcwd() .. "/" .. filename)
+                    local data = utils.read_file(save_paths(kind).file)
                     if not data then
                         utils.notify("No saved lists found")
                         close(false, nil)
@@ -180,8 +191,9 @@ local function storage_tab(kind, filename, loclist_win, setfn)
                 type = "action",
                 label = "Delete",
                 run = function(_, close)
-                    if utils.delete_file(vim.fn.getcwd() .. "/" .. filename) then
-                        utils.notify("Deleted " .. filename)
+                    local p = save_paths(kind)
+                    if utils.delete_file(p.file) then
+                        utils.notify("Deleted " .. p.label)
                     else
                         utils.notify("No saved lists found")
                     end
@@ -193,7 +205,7 @@ local function storage_tab(kind, filename, loclist_win, setfn)
                 type = "action",
                 label = "Show path",
                 run = function(_, close)
-                    utils.notify(vim.fn.getcwd())
+                    utils.notify(save_paths(kind).file)
                     close(false, nil)
                 end,
             },
@@ -213,7 +225,6 @@ local function open(kind, tab_selector, loclist_win)
     if not instance then
         return
     end
-    local filename = kind == "quick_fix" and ".lvim_qf.json" or ".lvim_loc.json"
     -- Normalised setter to ONE `(list, action, what)` signature: `setqflist` takes those three, but
     -- `setloclist` prepends a window-number arg — so calling the raw fn with a leading `0` blew up `setqflist`
     -- with "too many arguments" (the Quickfix → Load path). The wrapper hides that difference.
@@ -239,7 +250,7 @@ local function open(kind, tab_selector, loclist_win)
         tabs = {
             browse_tab(kind, loclist_win),
             delete_tab(kind, loclist_win),
-            storage_tab(kind, filename, loclist_win, setfn),
+            storage_tab(kind, loclist_win, setfn),
         },
         callback = function() end,
     })
