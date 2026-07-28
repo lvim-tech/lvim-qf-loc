@@ -1,6 +1,6 @@
 -- lua/lvim-qf-loc/health.lua
 -- `:checkhealth lvim-qf-loc` — verifies the runtime the qf module needs and warns about the two things that
--- actually break it: a too-old Neovim, and ANOTHER plugin (nvim-bqf / quicker.nvim) owning `quickfixtextfunc`
+-- actually break it: a too-old Neovim, and ANOTHER plugin owning `quickfixtextfunc`
 -- or the quickfix window at the same time. Reports the effective `view` and whether its dependencies are met.
 --
 ---@module "lvim-qf-loc.health"
@@ -51,8 +51,8 @@ function M.check()
         warn("view = 'area' needs lvim-picker; falling back to the native window.")
     end
 
-    -- ownership of quickfixtextfunc — the real conflict source. We claim it; a foreign value means another
-    -- quickfix plugin (e.g. nvim-bqf / quicker.nvim) is fighting for the same window.
+    -- ownership of quickfixtextfunc — the real conflict source. We claim it; a foreign value means
+    -- another quickfix plugin is fighting for the same window.
     if not config.edit.enabled then
         info("edit.enabled = false — the native quickfix is left read-only.")
     elseif vim.o.quickfixtextfunc == "v:lua.LvimQfLocTextFunc" then
@@ -63,17 +63,14 @@ function M.check()
         warn(
             "quickfixtextfunc is set by something else ("
                 .. vim.o.quickfixtextfunc
-                .. ") — disable nvim-bqf "
-                .. "/ quicker.nvim so lvim-qf-loc can own the quickfix."
+                .. ") — disable that plugin so lvim-qf-loc can own the quickfix."
         )
     end
 
-    -- flag the plugins this module replaces if they are still loaded
-    for _, mod in ipairs({ "bqf", "quicker" }) do
-        if package.loaded[mod] then
-            warn("'" .. mod .. "' is loaded — this module replaces it; disable it to avoid two qf UIs.")
-        end
-    end
+    -- WHAT IS OWNED, not WHO owns it: probing `package.loaded` for a hard-coded list of other
+    -- projects' module names is knowledge this plugin has no business carrying, and it goes stale
+    -- the moment a new quickfix plugin appears. The `quickfixtextfunc` check above already reports
+    -- the only thing that actually breaks — and it reports it for ANY foreign owner.
 end
 
 return M

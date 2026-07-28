@@ -19,16 +19,17 @@ CONTENTS                                                        *lvim-qf-loc*
 
 lvim-qf-loc improves Neovim's quickfix and location lists. Besides the floating
 tabbed popup (browse / delete / persist lists, and load diagnostics into the
-quickfix), it provides a full quickfix workflow that REPLACES nvim-bqf and
-quicker.nvim with a single, self-contained module:
+quickfix), it provides a full quickfix workflow in a single, self-contained
+module:
 
   - a floating PREVIEW of the entry under the cursor,
   - an EDITABLE quickfix whose `:w` writes back to the files,
   - CONTEXT expand/collapse around each entry, and
   - a BROWSER hosted in the lvim-utils area.
 
-It is crash-safe by design: no LuaJIT FFI, no "magicwin" scroll math (nvim-bqf),
-and no delimiter parsing (quicker) — the editable text is the source line and
+It is crash-safe by design: no LuaJIT FFI, no scroll math against the window's
+internal state, no delimiter parsing of the rendered line — the editable text
+is the source line and
 the location prefix is virtual text, entry identity rides on extmarks, and every
 write is verified against the file before it is applied.
 
@@ -40,8 +41,8 @@ write is verified against the file before it is applied.
   - lvim-picker (optional) — enables the "area" view and the browser.
     The native view works without either.
 
-Disable nvim-bqf and quicker.nvim: this plugin owns 'quickfixtextfunc' and the
-quickfix window, and the three would conflict. See |lvim-qf-loc-health|.
+This plugin owns 'quickfixtextfunc' and the quickfix window, so any other
+plugin claiming them will conflict — keep only one. See |lvim-qf-loc-health|.
 
 ==============================================================================
 3. COMMANDS                                            *lvim-qf-loc-commands*
@@ -229,7 +230,6 @@ User options are merged in place into the live config, so any module reading
 
 `:checkhealth lvim-qf-loc` reports the Neovim version, whether lvim-picker is
 present (for the area view / browser), the effective `view`, and warns if
-another plugin (nvim-bqf / quicker.nvim) owns 'quickfixtextfunc' or is still
-loaded — the one real source of conflicts.
+another plugin owns 'quickfixtextfunc' — the one real source of conflicts.
 
 vim:tw=78:ts=8:ft=help:norl:

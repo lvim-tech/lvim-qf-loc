@@ -1,8 +1,9 @@
 -- lua/lvim-qf-loc/qf/edit.lua
--- The EDITABLE quickfix — quicker.nvim's headline feature, reimplemented to be CRASH-SAFE. The qf buffer's
+-- The EDITABLE quickfix, built to be CRASH-SAFE. The qf buffer's
 -- editable text is the SOURCE LINE of each entry (read live from the file), and the `file:lnum │ ` prefix is
--- INLINE VIRTUAL TEXT, not buffer text — so there is no fragile delimiter to parse (quicker's prime crash:
--- a deleted EM_QUAD aborts a whole file) and the prefix simply cannot be broken by an edit. Each row's entry
+-- INLINE VIRTUAL TEXT, not buffer text — so there is no fragile delimiter to parse (the classic failure
+-- of that approach: one deleted separator character aborts a whole file) and the prefix simply cannot be
+-- broken by an edit. Each row's entry
 -- identity rides on an EXTMARK (it tracks the line through reorders/inserts), never the text. On write we apply
 -- the edits with full guards: every entry is verified to still match its source line on disk (external change →
 -- skipped, not corrupted), conflicting edits to one line are reported, every buffer op is pcall'd, and the
@@ -195,7 +196,7 @@ local function icon_of(e)
     return config.browser.icons[t] or config.browser.icons.default or ""
 end
 
---- The inline virtual-text prefix: aligned `[icon] filename │ lnum,col │` columns (quicker-style) — filename
+--- The inline virtual-text prefix: aligned `[icon] filename │ lnum,col │` columns — filename
 --- blue, the middle line/col column yellow, the separators red. `col_width` / `mid_width` are the list-wide
 --- maxima so every row lines up.
 ---@param e table
@@ -380,7 +381,7 @@ local function highlight_line(qbuf, i, e, qline, dim, ctx)
     return true
 end
 
---- Syntax-highlight every rendered row from its file's treesitter grammar (like quicker). Real entries get
+--- Syntax-highlight every rendered row from its file's treesitter grammar. Real entries get
 --- full colour; CONTEXT rows (valid = 0) get the SAME syntax routed through DIMMED copies (the lvim-colorscheme
 --- `dim` look), so context reads as muted code — not a flat block, not another match. Colours come from each
 --- source buffer's PERSISTENT parser (NOT a per-line `get_string_parser`, which churns native trees and has

@@ -1,8 +1,9 @@
 -- lua/lvim-qf-loc/qf/browser.lua
--- The quickfix / location-list BROWSER — the bqf-style experience (a live preview of the entry under the
--- cursor) reimplemented on the lvim-utils stack: the list + a REAL-Neovim preview open in OUR area (the
--- surface chassis, same zone as the pickers and the lsp navigation), NOT a native qf float and NOT bqf's
--- FFI + "magicwin" window math (the brittle, crash-prone parts we deliberately drop). The list is the
+-- The quickfix / location-list BROWSER — a live preview of the entry under the cursor, built on the
+-- lvim-utils stack: the list + a REAL-Neovim preview open in OUR area (the surface chassis, same
+-- zone as the pickers and the lsp navigation), NOT a native qf float, and with neither LuaJIT FFI
+-- nor scroll math against the window's internals (the brittle, crash-prone parts of the usual
+-- implementations, deliberately dropped). The list is the
 -- lvim-picker list — so it comes with fuzzy narrowing, the Tab mark dot, `<C-q>` → a new list, and the
 -- severity filter bar for free; this file just sources the rows from `getqflist`/`getloclist` and styles them.
 --
@@ -109,7 +110,7 @@ function M.open(loclist_win, layout)
         format = function(it)
             return it.text
         end,
-        preview_file = true, -- the REAL file buffer in the preview (the bqf feature) — no FFI / magicwin
+        preview_file = true, -- the REAL file buffer in the preview — no FFI, no internal scroll math
         preview_side = config.browser.preview_side, -- "right" (default) | "left" | "dynamic" (peek float above)
         -- No `preview_heights`: the SLOT height of the picker's float/area/bottom dock is centralized by
         -- lvim-utils (`config.dock.geometry`). Passing our own would duplicate it, so we let the picker/surface

@@ -1,6 +1,7 @@
 -- lua/lvim-qf-loc/qf/preview.lua
--- The NATIVE-view preview — nvim-bqf's floating preview of the entry under the cursor, but built on plain,
--- public Neovim window APIs: NO LuaJIT FFI and NO "magicwin" scroll math (bqf's two crash sources). One
+-- The NATIVE-view preview — a floating preview of the entry under the cursor, built on plain,
+-- public Neovim window APIs: NO LuaJIT FFI and NO scroll math against the window's internal state
+-- (the two classic crash sources of this feature). One
 -- reusable float shows the entry's REAL file buffer (so syntax highlighting + folds are free and live),
 -- scrolled to the entry with its line highlighted; it follows the quickfix cursor and closes with the list.
 -- Positioned just above the quickfix window, clamped to the screen — every window op is guarded.

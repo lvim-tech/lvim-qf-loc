@@ -138,7 +138,7 @@ return {
         autosave = "unmodified",
         separator = "│",
         max_filename_width = 40, -- cap for the aligned filename column (longer paths get a leading …)
-        syntax = true, -- treesitter-highlight each entry's source line (like quicker)
+        syntax = true, -- treesitter-highlight each entry's source line
         -- keys in the quickfix window: open the entry in the window the qf was called from, or in a split / tab
         keys = {
             open = "<CR>",

@@ -1,5 +1,5 @@
 -- lua/lvim-qf-loc/qf/context.lua
--- Expand / collapse SURROUNDING CONTEXT in the quickfix — quicker.nvim's context feature, rebuilt cleanly and
+-- Expand / collapse SURROUNDING CONTEXT in the quickfix — rebuilt cleanly and
 -- made PER-ENTRY: `zo` opens context around the entry UNDER THE CURSOR only (like a fold), `zc` closes it.
 -- Each entry's open amount lives in the list's `context` under our key as a map `{ ["bufnr:lnum:col"] =
 -- {before, after} }` (col included, so two diagnostics on one line are distinct folds), so entries expand

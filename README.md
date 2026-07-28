@@ -3,8 +3,8 @@
 Improvements for Neovim's quickfix and location lists — a tabbed UI to browse, delete
 and persist lists, plus a full quickfix workflow: a live **preview**, an **editable**
 quickfix that writes back to your files, **context** expand/collapse, and a **browser**
-in the lvim-utils area. A self-contained replacement for nvim-bqf + quicker.nvim — crash-safe
-by design (no FFI, no "magicwin" scroll math, no delimiter parsing).
+in the lvim-utils area. Self-contained and crash-safe by design: no FFI, no scroll
+math against the window's internal state, no delimiter parsing of the rendered line.
 Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
 [lvim-picker](https://github.com/lvim-tech/lvim-picker) (optional, falls back gracefully).
 
@@ -20,7 +20,7 @@ Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
 - Load diagnostics into the quickfix and browse them
 - Tabbed UI powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) (optional, falls back gracefully)
 
-**Quickfix module** (replaces nvim-bqf + quicker.nvim):
+**Quickfix module**:
 
 - **Preview** — a live float of the entry under the cursor (real file buffer, syntax-highlighted), no FFI / magicwin;
   `<C-d>` / `<C-u>` scroll it from the list (peek more context)
@@ -42,8 +42,8 @@ Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
 - [lvim-ui](https://github.com/lvim-tech/lvim-ui) _(optional — enables the tabbed management popup)_
 - [lvim-picker](https://github.com/lvim-tech/lvim-picker) _(optional — enables the area view and the browser)_
 
-> Disable **nvim-bqf** and **quicker.nvim** if you use them — this plugin owns `quickfixtextfunc` and the
-> quickfix window, and the three would conflict. Run `:checkhealth lvim-qf-loc` to verify.
+> This plugin owns `quickfixtextfunc` and the quickfix window, so any other plugin that also
+> claims them will conflict — keep only one. Run `:checkhealth lvim-qf-loc` to verify.
 
 ## Installation
 
