@@ -183,17 +183,33 @@ local function mid_text(e)
     return tostring(e.lnum or 0)
 end
 
+--- The severity icon an entry draws, or "" when it carries no type. One place decides it, so the
+--- WIDTH measured for the column and the text put in it can never disagree.
+---@param e table
+---@return string
+local function icon_of(e)
+    local t = e.type or ""
+    if t == "" then
+        return ""
+    end
+    return config.browser.icons[t] or config.browser.icons.default or ""
+end
+
 --- The inline virtual-text prefix: aligned `[icon] filename │ lnum,col │` columns (quicker-style) — filename
 --- blue, the middle line/col column yellow, the separators red. `col_width` / `mid_width` are the list-wide
 --- maxima so every row lines up.
 ---@param e table
 ---@param col_width integer
 ---@param mid_width integer
----@param has_sev boolean  the list carries severities → reserve an icon column
+---@param sev_width integer  the icon COLUMN's width in cells (0 = this list has no severities).
+---   A width rather than a flag: the configured icons are not all the same size — `󰅚 ` is two
+---   cells while `I`/`N`/`H` are a bare space — and an entry with no type at all draws nothing,
+---   so every row must be padded to the SAME column or the filenames step left and right down
+---   the list (reported from a screenshot).
 ---@param positioned boolean  the list points at file lines (→ the line/col column); else just `ordinal │ file`
 ---@param files boolean  a plain FILE list — the path is the editable buffer text, so draw NO filename prefix
 ---@return table[]
-local function prefix_chunks(e, col_width, mid_width, has_sev, positioned, files)
+local function prefix_chunks(e, col_width, mid_width, sev_width, positioned, files)
     local sep = config.edit.separator
     -- A FILE list: the PATH is the editable buffer text — no virtual filename column (it would duplicate it).
     if files then
@@ -208,8 +224,8 @@ local function prefix_chunks(e, col_width, mid_width, has_sev, positioned, files
     -- a CONTEXT row (valid = 0): blank filename column + the line number — sits under the real entry
     if e.valid == 0 then
         local chunks = {}
-        if has_sev then
-            chunks[#chunks + 1] = { "  ", "LvimQfLocSep" }
+        if sev_width > 0 then
+            chunks[#chunks + 1] = { string.rep(" ", sev_width), "LvimQfLocSep" }
         end
         chunks[#chunks + 1] = { rpad("", col_width), "LvimQfLocSep" }
         chunks[#chunks + 1] = { " " .. sep .. " ", "LvimQfLocSep" }
@@ -218,10 +234,8 @@ local function prefix_chunks(e, col_width, mid_width, has_sev, positioned, files
         return chunks
     end
     local chunks = {}
-    if has_sev then
-        local t = e.type or ""
-        local icon = (t ~= "") and (config.browser.icons[t] or config.browser.icons.default) or "  "
-        chunks[#chunks + 1] = { icon, SEV_HL[t] or "LvimQfLocSep" }
+    if sev_width > 0 then
+        chunks[#chunks + 1] = { rpad(icon_of(e), sev_width), SEV_HL[e.type or ""] or "LvimQfLocSep" }
     end
     chunks[#chunks + 1] = { rpad(filename_of(e, config.edit.max_filename_width), col_width), "LvimQfLocFile" }
     chunks[#chunks + 1] = { " " .. sep .. " ", "LvimQfLocSep" }
@@ -448,11 +462,9 @@ local function decorate(qbuf, loclist_win)
     -- line/col column + context); position-less lists drop the line/col column entirely
     local positioned = list_positioned(items)
     local files = list_is_files(items)
-    local col_width, mid_width, has_sev = 0, 1, false
+    local col_width, mid_width, sev_width = 0, 1, 0
     for _, e in ipairs(items) do
-        if (e.type or "") ~= "" then
-            has_sev = true
-        end
+        sev_width = math.max(sev_width, vim.fn.strdisplaywidth(icon_of(e)))
         if e.valid ~= 0 then
             col_width = math.max(col_width, vim.fn.strdisplaywidth(filename_of(e, config.edit.max_filename_width)))
         end
@@ -466,7 +478,7 @@ local function decorate(qbuf, loclist_win)
         if i <= n then
             local line = api.nvim_buf_get_lines(qbuf, i - 1, i, false)[1] or ""
             local ok, id = pcall(api.nvim_buf_set_extmark, qbuf, NS, i - 1, 0, {
-                virt_text = prefix_chunks(e, col_width, mid_width, has_sev, positioned, files),
+                virt_text = prefix_chunks(e, col_width, mid_width, sev_width, positioned, files),
                 virt_text_pos = "inline",
                 right_gravity = false,
             })
