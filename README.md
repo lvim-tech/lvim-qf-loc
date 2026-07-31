@@ -32,6 +32,9 @@ Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
   severity filter bar (`:LvimQf browse`); the **Browse** tab lists every stored list, pick one to browse it
 - **In-window open keys** — in the editable quickfix, `<CR>` opens the entry in the calling window, `<C-v>` in a
   vertical split, `<C-x>` in a horizontal split, `<C-t>` in a new tab; `g?` shows the keymap cheatsheet
+- **A button band you can step into** — the bar above the list is a real sector, not a legend: `<C-k>` from the
+  list (or `<C-j>` from the window above) focuses it, `h` / `l` pick a button, `<CR>` runs it, `<C-j>` / `q`
+  return to the list. It sits on the window's winbar row, so it costs the list no line
 - **`:Cfilter` / `:Lfilter`** — Neovim's built-in list filter is `packadd`ed on setup (`config.cfilter`), a
   natural companion for narrowing the quickfix / location list
 - **One UI, your choice** — `config.view` (`"native"` or `"area"`) picks which UI the quickfix uses

@@ -18,6 +18,8 @@ local config = require("lvim-qf-loc.config")
 local filecache = require("lvim-qf-loc.qf.filecache")
 local notify = require("lvim-qf-loc.utils.notify")
 local context = require("lvim-qf-loc.qf.context")
+-- The shared button/box model the band renders (never a hand-rolled highlight string).
+local surface = require("lvim-ui.surface")
 local preview = require("lvim-qf-loc.qf.preview")
 local browser = require("lvim-qf-loc.qf.browser")
 
@@ -450,6 +452,46 @@ end
 --- extmark per row, and install the write handler. Re-run after an apply (the source lines changed).
 ---@param qbuf integer
 ---@param loclist_win integer?
+---@type fun(qbuf: integer, owner_win: integer?, mode: string)  forward declaration: the band's buttons run
+--- the same open the keys do, and the band is built in `decorate`, which comes first in the file.
+local open_entry
+
+---@type table<integer, table>  the live button BAND per window showing a qf buffer (see `lvim-ui.band`)
+local bands = {}
+
+--- How many REAL entries the list holds — what the band reports. A positioned list counts only its
+--- valid entries (context rows are valid = 0); a position-less list's entries are all valid = 0, so
+--- every one counts.
+---@param loclist_win integer?
+---@return integer
+local function count_of(loclist_win)
+    local what = loclist_win and vim.fn.getloclist(loclist_win, { items = 0 }) or vim.fn.getqflist({ items = 0 })
+    local list = what.items or {}
+    local positioned = list_positioned(list)
+    if not positioned then
+        return #list
+    end
+    local n = 0
+    for _, e in ipairs(list) do
+        if e.valid ~= 0 then
+            n = n + 1
+        end
+    end
+    return n
+end
+
+--- The window a qf entry opens INTO — the one the list was called from, remembered per buffer by
+--- `setup_buffer` (a band button runs long after that, so it cannot close over the value).
+---@param qbuf integer
+---@return integer?
+local function owner_of(qbuf)
+    local w = vim.b[qbuf] and vim.b[qbuf].lvim_qf_loc_owner
+    if w and w ~= 0 and api.nvim_win_is_valid(w) then
+        return w
+    end
+    return nil
+end
+
 local function decorate(qbuf, loclist_win)
     if not api.nvim_buf_is_valid(qbuf) then
         return
@@ -518,30 +560,75 @@ local function decorate(qbuf, loclist_win)
         end
     end
     local ekeys, ckeys = config.edit.keys or {}, config.context.keys or {}
-    -- one button = a blue KEY box ` key ` then a yellow LABEL box ` label `, each with one space of its OWN
-    -- tint on each side; the boxes abut (no bar-bg gap), so the bar is an alternating blue/yellow run — the
-    -- yellow tint covers the whole label box (text + its padding), never the bar at large.
-    local function btn(key, label)
-        return "%#LvimQfLocBarKey# " .. (key:gsub("^<(.*)>$", "%1")) .. " %#LvimQfLocBarLabel# " .. label .. " "
-    end
-    local btns = {
-        { ekeys.open, "open" },
-        { ekeys.vsplit, "vsplit" },
-        { ekeys.split, "split" },
-        { ekeys.tab, "tab" },
+    -- The panel's top bar. It is a real, FOCUSABLE band (`lvim-ui.band`) rather than the `winbar` STRING it
+    -- used to be: a winbar cannot take a cursor, so its buttons were a legend and `<C-k>` fell through to
+    -- whatever moves windows — the list lost focus instead of stepping into the bar, unlike every other
+    -- panel in the set. The band sits on the same winbar ROW (so it still costs the list no line) and is a
+    -- sector: `<C-k>` enters it, `h`/`l` pick a button, `<CR>` runs it, `<C-j>`/`q` step back to the list.
+    local specs = {
+        {
+            ekeys.open,
+            "open",
+            function()
+                open_entry(qbuf, owner_of(qbuf), "edit")
+            end,
+        },
+        {
+            ekeys.vsplit,
+            "vsplit",
+            function()
+                open_entry(qbuf, owner_of(qbuf), "vsplit")
+            end,
+        },
+        {
+            ekeys.split,
+            "split",
+            function()
+                open_entry(qbuf, owner_of(qbuf), "split")
+            end,
+        },
+        {
+            ekeys.tab,
+            "tab",
+            function()
+                open_entry(qbuf, owner_of(qbuf), "tab")
+            end,
+        },
     }
     if positioned then -- context only means something with file positions
-        btns[#btns + 1] = { ckeys.expand, "expand" }
-        btns[#btns + 1] = { ckeys.collapse, "collapse" }
+        specs[#specs + 1] = {
+            ckeys.expand,
+            "expand",
+            function()
+                context.expand(loclist_win)
+            end,
+        }
+        specs[#specs + 1] = {
+            ckeys.collapse,
+            "collapse",
+            function()
+                context.collapse(loclist_win)
+            end,
+        }
     end
-    btns[#btns + 1] = { ekeys.help, "keys" }
-    local winbar = "%#LvimQfLocWinbar#" -- no leading space — the first button starts at the left edge
-    for _, b in ipairs(btns) do
+    specs[#specs + 1] = {
+        ekeys.help,
+        "keys",
+        function()
+            require("lvim-qf-loc.qf.help").show()
+        end,
+    }
+    local items = {}
+    for _, b in ipairs(specs) do
         if b[1] and b[1] ~= "" then
-            winbar = winbar .. btn(b[1], b[2])
+            items[#items + 1] = surface.button({
+                name = b[2],
+                key = (b[1]:gsub("^<(.*)>$", "%1")),
+                style = "action",
+                run = b[3],
+            }, "action")
         end
     end
-    winbar = winbar .. "%=%#LvimQfLocWinbar# " .. nitems .. " items "
     for _, win in ipairs(api.nvim_list_wins()) do
         if api.nvim_win_get_buf(win) == qbuf then
             pcall(function()
@@ -557,9 +644,40 @@ local function decorate(qbuf, loclist_win)
                 -- clear the native qf window's default statusline (`[Quickfix List] …`) so it falls back to
                 -- the user's global (chrome) statusline instead of vim's plain qf one
                 vim.wo[win].statusline = ""
-                -- a panel-style top bar (window-local "statusline above the panel"): label · count, g? hint
-                vim.wo[win].winbar = winbar
             end)
+            -- Re-attach the band when this window has none (a fresh `:copen`), else just repaint it: the
+            -- entry count and the context buttons change with every re-render, the window does not.
+            local band = bands[win]
+            if band and band.win() then
+                -- Only the items: the suffix is a live closure installed at attach, so the count follows
+                -- the list without being handed over on every repaint.
+                band.set(items)
+            else
+                band = require("lvim-ui.winband").attach(win, {
+                    items = items,
+                    align = "left",
+                    -- The band rides the WINBAR row, so the list keeps every one of its lines.
+                    side = "top",
+                    -- Bound by the band on the qf buffer itself: buffer-local is what makes it beat the
+                    -- global window-navigation `<C-k>`, which is why the bar used to be unreachable.
+                    enter_key = "<C-k>",
+                    -- One more `<C-k>` inside the band continues out of the panel, to the window above.
+                    nav_through = function()
+                        pcall(vim.cmd, "wincmd k")
+                    end,
+                    -- The count is computed at PAINT time, not captured: the band outlives any one
+                    -- render, and a closure over this pass's number would freeze the first count it saw.
+                    suffix = function()
+                        return " " .. count_of(loclist_win) .. " items "
+                    end,
+                    on_close = function()
+                        bands[win] = nil
+                    end,
+                })
+                if band then
+                    bands[win] = band
+                end
+            end
         end
     end
     -- syntax-highlight the source text after the rows are laid (deferred so the list shows instantly)
@@ -802,7 +920,7 @@ end
 ---@param qbuf integer
 ---@param owner_win integer?
 ---@param mode string
-local function open_entry(qbuf, owner_win, mode)
+function open_entry(qbuf, owner_win, mode)
     local qf_win = api.nvim_get_current_win() -- the open key fired IN the quickfix window
     local entry = M.entry_at(qbuf, api.nvim_win_get_cursor(0)[1])
     if not (entry and entry.bufnr and entry.bufnr > 0 and api.nvim_buf_is_valid(entry.bufnr)) then
