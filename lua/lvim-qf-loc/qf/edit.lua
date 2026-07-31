@@ -647,8 +647,10 @@ local function decorate(qbuf, loclist_win)
             end)
             -- Re-attach the band when this window has none (a fresh `:copen`), else just repaint it: the
             -- entry count and the context buttons change with every re-render, the window does not.
+            -- A live entry IS a live band: the band clears its own slot from `on_close`, which fires when
+            -- the host window closes, so there is nothing else to test.
             local band = bands[win]
-            if band and band.win() then
+            if band then
                 -- Only the items: the suffix is a live closure installed at attach, so the count follows
                 -- the list without being handed over on every repaint.
                 band.set(items)
