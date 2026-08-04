@@ -448,15 +448,11 @@ local function define_highlights()
     end
 end
 
---- Prepare the qf buffer for editing: make it modifiable, lay the virtual prefixes + one entry-tracking
---- extmark per row, and install the write handler. Re-run after an apply (the source lines changed).
----@param qbuf integer
----@param loclist_win integer?
 ---@type fun(qbuf: integer, owner_win: integer?, mode: string)  forward declaration: the band's buttons run
 --- the same open the keys do, and the band is built in `decorate`, which comes first in the file.
 local open_entry
 
----@type table<integer, table>  the live button BAND per window showing a qf buffer (see `lvim-ui.band`)
+---@type table<integer, LvimUiWinBand>  the live button BAND per window showing a qf buffer
 local bands = {}
 
 --- How many REAL entries the list holds — what the band reports. A positioned list counts only its
@@ -492,6 +488,10 @@ local function owner_of(qbuf)
     return nil
 end
 
+--- Prepare the qf buffer for editing: make it modifiable, lay the virtual prefixes + one entry-tracking
+--- extmark per row, and install the write handler. Re-run after an apply (the source lines changed).
+---@param qbuf integer
+---@param loclist_win integer?
 local function decorate(qbuf, loclist_win)
     if not api.nvim_buf_is_valid(qbuf) then
         return
@@ -618,10 +618,10 @@ local function decorate(qbuf, loclist_win)
             require("lvim-qf-loc.qf.help").show()
         end,
     }
-    local items = {}
+    local band_items = {}
     for _, b in ipairs(specs) do
         if b[1] and b[1] ~= "" then
-            items[#items + 1] = surface.button({
+            band_items[#band_items + 1] = surface.button({
                 name = b[2],
                 key = (b[1]:gsub("^<(.*)>$", "%1")),
                 style = "action",
@@ -649,14 +649,15 @@ local function decorate(qbuf, loclist_win)
             -- entry count and the context buttons change with every re-render, the window does not.
             -- A live entry IS a live band: the band clears its own slot from `on_close`, which fires when
             -- the host window closes, so there is nothing else to test.
+            ---@type LvimUiWinBand?
             local band = bands[win]
             if band then
                 -- Only the items: the suffix is a live closure installed at attach, so the count follows
                 -- the list without being handed over on every repaint.
-                band.set(items)
+                band.set(band_items)
             else
                 band = require("lvim-ui.winband").attach(win, {
-                    items = items,
+                    items = band_items,
                     align = "left",
                     -- The band rides the WINBAR row, so the list keeps every one of its lines.
                     side = "top",
@@ -665,7 +666,7 @@ local function decorate(qbuf, loclist_win)
                     enter_key = "<C-k>",
                     -- One more `<C-k>` inside the band continues out of the panel, to the window above.
                     nav_through = function()
-                        pcall(vim.cmd, "wincmd k")
+                        pcall(vim.cmd.wincmd, "k")
                     end,
                     -- The count is computed at PAINT time, not captured: the band outlives any one
                     -- render, and a closure over this pass's number would freeze the first count it saw.
@@ -931,7 +932,7 @@ function open_entry(qbuf, owner_win, mode)
     pcall(vim.fn.bufload, entry.bufnr)
     local scratch -- the empty buffer `topleft new` makes (fallback only); wipe it once the file takes its window
     if mode == "tab" then
-        pcall(vim.cmd, "tabnew")
+        pcall(vim.cmd.tabnew)
     else
         -- Host the file in a REAL editor window: the one the qf was called from IF it is still one (it can go
         -- stale — closed, or now holding a panel), else any normal window. With NONE (only side panels + the
@@ -951,11 +952,11 @@ function open_entry(qbuf, owner_win, mode)
         if target then
             api.nvim_set_current_win(target)
             if mode == "vsplit" then
-                pcall(vim.cmd, "vsplit")
+                pcall(vim.cmd.vsplit)
             elseif mode == "split" then
-                pcall(vim.cmd, "split")
+                pcall(vim.cmd.split)
             end
-        elseif pcall(vim.cmd, "topleft new") then
+        elseif pcall(vim.cmd.new, { mods = { split = "topleft" } }) then
             scratch = api.nvim_get_current_buf()
         end
     end
@@ -1032,8 +1033,10 @@ function M.setup_buffer(qbuf)
     pcall(api.nvim_buf_set_name, qbuf, "quickfix-" .. qbuf)
     context.setup_keys(qbuf, loclist_win) -- the context expand/collapse keys
     -- the window the qf was called FROM (its alternate window now that the qf is focused) — open targets it
-    local owner_win = vim.fn.win_getid(vim.fn.winnr("#"))
-    if owner_win == 0 or not api.nvim_win_is_valid(owner_win) or owner_win == api.nvim_get_current_win() then
+    local alt_win = vim.fn.win_getid(vim.fn.winnr("#"))
+    ---@type integer?
+    local owner_win = alt_win
+    if alt_win == 0 or not api.nvim_win_is_valid(alt_win) or alt_win == api.nvim_get_current_win() then
         owner_win = nil
     end
     local keys = config.edit.keys or {}

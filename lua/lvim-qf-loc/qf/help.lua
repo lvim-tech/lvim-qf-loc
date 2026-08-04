@@ -7,7 +7,6 @@
 --
 ---@module "lvim-qf-loc.qf.help"
 
-local api = vim.api
 local config = require("lvim-qf-loc.config")
 
 local M = {}
