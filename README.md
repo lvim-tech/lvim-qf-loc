@@ -41,7 +41,7 @@ Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
 
 ## Requirements
 
-- Neovim 0.10+
+- Neovim 0.12+
 - [lvim-ui](https://github.com/lvim-tech/lvim-ui) _(optional — enables the tabbed management popup)_
 - [lvim-picker](https://github.com/lvim-tech/lvim-picker) _(optional — enables the area view and the browser)_
 
@@ -50,7 +50,7 @@ Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
 
 ## Installation
 
-Requires Neovim >= 0.10.
+Requires Neovim >= 0.12.
 
 ### lvim-installer (recommended)
 

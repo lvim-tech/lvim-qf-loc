@@ -19,11 +19,12 @@ local info = health.info
 function M.check()
     start("lvim-qf-loc")
 
-    -- Neovim version: the editable extmarks + inline virtual text the qf module relies on need 0.10+.
-    if vim.fn.has("nvim-0.10") == 1 then
+    -- Neovim version: the editable extmarks + inline virtual text the qf module relies on need 0.10; the floor
+    -- checked is the set's, 0.12 — a REQUIREMENT now, not the old 0.10 recommendation.
+    if vim.fn.has("nvim-0.12") == 1 then
         ok("Neovim " .. tostring(vim.version()))
     else
-        warn("Neovim 0.10+ is recommended (inline virtual text + extmark editing).")
+        health.error("Neovim >= 0.12 is required (the lvim-tech set targets 0.12)")
     end
 
     -- lvim-picker: required by the area view + the browser (the popup, `:LvimQf browse` / `diagnostics`).

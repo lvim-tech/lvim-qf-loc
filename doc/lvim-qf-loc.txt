@@ -36,7 +36,7 @@ write is verified against the file before it is applied.
 ==============================================================================
 2. REQUIREMENTS                                    *lvim-qf-loc-requirements*
 
-  - Neovim 0.10+.
+  - Neovim 0.12+.
   - lvim-ui (optional) — enables the tabbed management popup.
   - lvim-picker (optional) — enables the "area" view and the browser.
     The native view works without either.
