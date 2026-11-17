@@ -192,7 +192,7 @@ require("lvim-qf-loc").setup({
     -- the area browser (its slot height comes from the central lvim-utils dock geometry — no size here)
     browser = {
         layout = "area", -- "area" | "float" | "bottom"
-        preview_side = "above", -- "above" | "below" | "right" | "left" (rotate live with <C-n>/<C-p>)
+        preview_side = nil, -- nil = lvim-picker's preview_side; or "right" | "left" | "dynamic" (rotate live with <C-n>/<C-p>)
         icons = { E = "󰅚 ", W = "󰀪 ", I = " ", N = " ", H = " ", default = " " },
     },
 

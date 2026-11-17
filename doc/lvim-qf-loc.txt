@@ -217,7 +217,7 @@ and the cursor-preview float are content-fit and are NEVER dock consumers.
 
       browser = {                      -- the area browser (slot height is central, no size here)
           layout = "area",
-          preview_side = "above",      -- "above" | "below" | "right" | "left"
+          preview_side = nil,          -- nil = lvim-picker's; or "right" | "left" | "dynamic"
           icons = { E = "󰅚 ", W = "󰀪 ", I = " ", N = " ", H = " ", default = " " },
       },
   })
