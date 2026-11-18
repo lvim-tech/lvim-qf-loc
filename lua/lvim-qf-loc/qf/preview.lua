@@ -19,7 +19,7 @@ local win
 local scratch
 
 --- Define the footer highlight groups from the lvim-utils palette (file = blue, labels = yellow, numbers =
---- green, separators dim, the ➤ marker an accent) so they track the theme; when lvim-utils is absent, link to
+--- green, separators dim, the 󰅂 marker an accent) so they track the theme; when lvim-utils is absent, link to
 --- always-present groups. Idempotent — safe to call again on a colorscheme change.
 local function define_highlights()
     local okc, c = pcall(require, "lvim-utils.colors")
@@ -51,7 +51,7 @@ end
 
 --- Install the footer highlights + re-apply them on a colorscheme/palette change.
 function M.setup()
-    -- One-time cleanup: an earlier version set the ➤ marker + line highlight as BUFFER extmarks on the real
+    -- One-time cleanup: an earlier version set the 󰅂 marker + line highlight as BUFFER extmarks on the real
     -- file buffers, which leaked (and a sign-aware statuscolumn then hid the line number). Clear any leftovers
     -- so a plugin reload (not a full restart) recovers without the stale signs.
     local stale = api.nvim_create_namespace("lvim-qf-loc-preview")
@@ -84,7 +84,7 @@ local function preview_border()
     return "rounded" -- standalone fallback (lvim-utils absent; a native string border nvim accepts as-is)
 end
 
---- The centered TOP title: `<file> ➤ line <lnum> ➤ col <col>` as a coloured box — tight (no column padding).
+--- The centered TOP title: `<file> 󰅂 line <lnum> 󰅂 col <col>` as a coloured box — tight (no column padding).
 ---@param entry table
 ---@return table[]  title chunks for nvim_open_win
 local function title_chunks(entry)
@@ -99,10 +99,10 @@ local function title_chunks(entry)
     if pos == "always" or (pos ~= "never" and (entry.type or "") == "") then
         local lnum = (entry.lnum and entry.lnum > 0) and entry.lnum or 1
         local col = (entry.col and entry.col > 0) and entry.col or 1
-        chunks[#chunks + 1] = { "➤ ", "LvimQfLocPreviewSep" }
+        chunks[#chunks + 1] = { "󰅂 ", "LvimQfLocPreviewSep" }
         chunks[#chunks + 1] = { "line ", "LvimQfLocPreviewLabel" }
         chunks[#chunks + 1] = { tostring(lnum), "LvimQfLocPreviewNum" }
-        chunks[#chunks + 1] = { " ➤ ", "LvimQfLocPreviewSep" }
+        chunks[#chunks + 1] = { " 󰅂 ", "LvimQfLocPreviewSep" }
         chunks[#chunks + 1] = { "col ", "LvimQfLocPreviewLabel" }
         chunks[#chunks + 1] = { tostring(col) .. " ", "LvimQfLocPreviewNum" }
     end
@@ -240,12 +240,12 @@ function M.update(entry, qwin)
         end
         win = w
     end
-    -- A POSITIONED entry (grep / diagnostics / references) marks its focused line with the ➤ sign + the
+    -- A POSITIONED entry (grep / diagnostics / references) marks its focused line with the 󰅂 sign + the
     -- cursorline highlight; a plain FILE entry has no specific line, so it shows NEITHER — just line numbers.
     local positioned = (entry.lnum and entry.lnum > 0) and true or false
     -- window-local look (guarded; a no-name scratch can reject some)
     pcall(function()
-        vim.wo[win].number = false -- the statuscolumn below renders the number (with the ➤ marker)
+        vim.wo[win].number = false -- the statuscolumn below renders the number (with the 󰅂 marker)
         vim.wo[win].relativenumber = false
         vim.wo[win].cursorline = positioned
         vim.wo[win].cursorlineopt = "both"
@@ -254,10 +254,10 @@ function M.update(entry, qwin)
         vim.wo[win].wrap = false
         vim.wo[win].winbar = "%#NormalFloat# " -- one blank "air" row under the title, in the float's own bg
         -- The entry marker + line number live in a WINDOW-LOCAL statuscolumn, and the focused-line highlight
-        -- in cursorline (mapped to config.preview.hl) — NOT buffer extmarks, which would leak the ➤ sign and the
+        -- in cursorline (mapped to config.preview.hl) — NOT buffer extmarks, which would leak the 󰅂 sign and the
         -- highlight onto the real file buffer (and hide the line number in a sign-aware statuscolumn). For a
-        -- file entry the marker column is blank (no ➤).
-        local marker = positioned and "%{% v:relnum == 0 ? '%#LvimQfLocPreviewMarker#➤' : ' ' %}" or " "
+        -- file entry the marker column is blank (no 󰅂).
+        local marker = positioned and "%{% v:relnum == 0 ? '%#LvimQfLocPreviewMarker#󰅂' : ' ' %}" or " "
         vim.wo[win].statuscolumn = marker .. " %#LineNr#%{v:lnum} "
         vim.wo[win].winhighlight = "CursorLine:" .. config.preview.hl
     end)

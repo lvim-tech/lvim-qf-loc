@@ -210,7 +210,7 @@ return {
             spacer = "   ──────",
             multi_selected = "󰄬",
             multi_empty = "󰍴",
-            current = "➤",
+            current = "󰅂",
         },
 
         labels = {
