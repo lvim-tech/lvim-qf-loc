@@ -29,6 +29,7 @@ local function entries()
     add(c.expand, "expand context")
     add(c.collapse, "collapse context")
     add(c.toggle, "toggle context")
+    add(config.switch, "switch to the area view")
     add(k.help, "this help")
     add("q", "close")
     return out

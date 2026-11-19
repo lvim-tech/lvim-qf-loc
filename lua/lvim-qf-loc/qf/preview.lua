@@ -47,6 +47,7 @@ local function define_highlights()
             pcall(api.nvim_set_hl, 0, name, { link = link, default = true })
         end
     end
+    require("lvim-qf-loc.qf.matches").define_highlights()
 end
 
 --- Install the footer highlights + re-apply them on a colorscheme/palette change.
@@ -267,6 +268,12 @@ function M.update(entry, qwin)
         pcall(api.nvim_win_set_cursor, win, { lnum, math.max(0, (entry.col or 1) - 1) })
         vim.cmd("normal! zz")
     end)
+    -- the search the list came from: every match in the preview, the entry's own one harder; and every match
+    -- in the list rows (they are the source lines)
+    local matches = require("lvim-qf-loc.qf.matches")
+    local pattern = matches.pattern(qwin)
+    matches.mark(win, pattern, positioned and buf == entry.bufnr and entry or nil)
+    matches.mark(qwin, pattern)
 end
 
 return M

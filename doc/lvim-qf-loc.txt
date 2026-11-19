@@ -81,7 +81,11 @@ list always look the same — no two competing UIs.
   "area"                `:copen` opens the browser (|lvim-qf-loc-browser|) in
                         the lvim-utils area instead of the native window.
 
-`:LvimQf browse` opens the area browser explicitly in either view.
+`:LvimQf area` (or `float` / `bottom`) opens the browser explicitly in either
+view.
+
+`<C-]>` (`config.switch`) in either view, or `:LvimQf switch`, shows the current
+list in the other view (native ⇄ area); the choice holds for the session.
 
 ==============================================================================
 5. EDITABLE QUICKFIX                                   *lvim-qf-loc-editable*
@@ -139,10 +143,13 @@ Disable the preview with `config.preview.enabled = false`.
 ==============================================================================
 8. BROWSER                                              *lvim-qf-loc-browser*
 
-`:LvimQf browse` (and `:LvimLoc browse`) opens the list in the lvim-utils area:
-the list + a real-Neovim preview, with fuzzy narrowing, the mark dot, `<C-q>` →
-a new list, and (for diagnostic lists) a severity filter bar. `config.browser`
-sets the layout, the preview side (`<C-n>`/`<C-p>` rotate it live) and the
+`:LvimQf area` (or `float` / `bottom`, and the same for `:LvimLoc`) opens the
+current list in the browser, in that layout: the list + a real-Neovim preview,
+with fuzzy narrowing, the mark dot, `<C-q>` → a new list, and (for diagnostic
+lists) a severity filter bar. Its rows are drawn like the editable quickfix:
+the ordinal, the aligned file and `lnum, col` columns, and the source line in
+its file's treesitter colours, with a grep match marked. `config.browser` sets
+the layout, the preview side (`<C-n>`/`<C-p>` rotate it live) and the
 per-severity icons.
 
 The Browse tab of the management popup lists every stored list; pick one to

@@ -351,36 +351,54 @@ end
 ---@param dim boolean
 ---@param ctx table|false  the row's source treesitter context, from `ts_ctx`
 ---@return boolean applied
-local function highlight_line(qbuf, i, e, qline, dim, ctx)
+--- The treesitter captures of an entry's source line as `{ c0, c1, group }` byte ranges, clamped to `line`
+--- (the rendered copy of that line), using the pre-resolved `ctx` for its source buffer (`ts_ctx`). nil when
+--- treesitter does not apply (no grammar, no line); an empty list when the row just failed to parse.
+---@param e table
+---@param line string
+---@param ctx table|false
+---@return { [1]: integer, [2]: integer, [3]: string }[]?
+local function syntax_ranges(e, line, ctx)
     if not ctx or not (e.lnum and e.lnum > 0) then
-        return false
+        return nil
     end
     local lang, parser, query = ctx.lang, ctx.parser, ctx.query
-    local row, maxc = e.lnum - 1, #qline
+    local row, maxc = e.lnum - 1, #line
+    local out = {}
     local okp, trees = pcall(function()
         return parser:parse({ row, row + 1 })
     end)
     if not (okp and trees) then
-        return true -- treesitter applies; this row just failed to parse — don't fall back to a flat colour
+        return out
     end
     for _, tree in ipairs(trees) do
         for id, node in query:iter_captures(tree:root(), e.bufnr, row, row + 1) do
             local sr, sc, er, ec = node:range()
-            if sr == row then -- only this row; clamp to the qf line's bytes
+            if sr == row then -- only this row; clamp to the line's bytes
                 local c0 = math.min(sc, maxc)
                 local c1 = (er == row) and math.min(ec, maxc) or maxc
                 if c1 > c0 then
-                    local g = "@" .. query.captures[id] .. "." .. lang
-                    pcall(api.nvim_buf_set_extmark, qbuf, NS_SYNTAX, i - 1, c0, {
-                        end_col = c1,
-                        hl_group = dim and dim_group(g) or g,
-                        priority = 90,
-                    })
+                    out[#out + 1] = { c0, c1, "@" .. query.captures[id] .. "." .. lang }
                 end
             end
         end
     end
-    return true
+    return out
+end
+
+local function highlight_line(qbuf, i, e, qline, dim, ctx)
+    local ranges = syntax_ranges(e, qline, ctx)
+    if not ranges then
+        return false
+    end
+    for _, r in ipairs(ranges) do
+        pcall(api.nvim_buf_set_extmark, qbuf, NS_SYNTAX, i - 1, r[1], {
+            end_col = r[2],
+            hl_group = dim and dim_group(r[3]) or r[3],
+            priority = 90,
+        })
+    end
+    return true -- treesitter applies (a row that failed to parse must not fall back to a flat colour)
 end
 
 --- Syntax-highlight every rendered row from its file's treesitter grammar. Real entries get
@@ -416,6 +434,10 @@ end
 --- link-based fallback when it is absent. The line number follows the editor's `LineNr` (real-buffer gutter
 --- colour), so it is not registered here. Re-applied on a colorscheme/palette change.
 local function define_highlights()
+    -- the ordinal column in the browser rows: muted but READABLE on the row stripes — the comment colour, fg
+    -- only (LineNr is often nearly the background colour: a gutter colour, not a text one)
+    local cm = api.nvim_get_hl(0, { name = "Comment", link = false })
+    pcall(api.nvim_set_hl, 0, "LvimQfLocOrdinal", { fg = cm.fg })
     for k in pairs(dim_cache) do -- the dimmed context copies are palette-derived; recompute on a theme change
         dim_cache[k] = nil
     end
@@ -612,6 +634,13 @@ local function decorate(qbuf, loclist_win)
         }
     end
     specs[#specs + 1] = {
+        config.switch,
+        "area",
+        function()
+            require("lvim-qf-loc.qf.view").switch(loclist_win)
+        end,
+    }
+    specs[#specs + 1] = {
         ekeys.help,
         "keys",
         function()
@@ -640,6 +669,9 @@ local function decorate(qbuf, loclist_win)
                 vim.wo[win].cursorlineopt = "both"
                 vim.wo[win].winhighlight = "CursorLine:LvimQfLocCursorLine"
                 vim.wo[win].colorcolumn = "" -- no vertical colour column in the list
+                -- one entry, one row: a wrapped long source line breaks the aligned columns into continuation
+                -- rows that belong to no entry (the global `wrap` is often on)
+                vim.wo[win].wrap = false
                 vim.wo[win].cursorcolumn = false
                 -- clear the native qf window's default statusline (`[Quickfix List] …`) so it falls back to
                 -- the user's global (chrome) statusline instead of vim's plain qf one
@@ -1051,6 +1083,13 @@ function M.setup_buffer(qbuf)
     map_open(keys.vsplit, "vsplit")
     map_open(keys.split, "split")
     map_open(keys.tab, "tab")
+    if config.switch and config.switch ~= "" then
+        vim.keymap.set("n", config.switch, function()
+            local info = vim.fn.getloclist(0, { filewinid = 0 })
+            local lw = (info.filewinid and info.filewinid ~= 0) and info.filewinid or nil
+            require("lvim-qf-loc.qf.view").switch(lw)
+        end, { buffer = qbuf, nowait = true, silent = true, desc = "lvim-qf-loc: switch to the area view" })
+    end
     if keys.help and keys.help ~= "" then
         vim.keymap.set("n", keys.help, function()
             require("lvim-qf-loc.qf.help").show()
@@ -1206,5 +1245,21 @@ function M.setup()
         end,
     })
 end
+
+-- The list's column pieces, shared with the browser (qf/browser.lua) so both draw the same rows.
+M.columns = {
+    source_text = source_text,
+    list_is_files = list_is_files,
+    description_text = description_text,
+    path_text = path_text,
+    filename_of = filename_of,
+    mid_text = mid_text,
+    icon_of = icon_of,
+    rpad = rpad,
+    lpad = lpad,
+    sev_hl = SEV_HL,
+    ts_ctx = ts_ctx,
+    syntax_ranges = syntax_ranges,
+}
 
 return M

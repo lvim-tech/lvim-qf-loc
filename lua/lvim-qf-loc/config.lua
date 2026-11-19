@@ -58,6 +58,7 @@
 ---@field max_height   integer                 Maximum quickfix window height (rows).
 ---@field cfilter      boolean                 `packadd` Neovim's built-in `cfilter` on setup (`:Cfilter`/`:Lfilter`).
 ---@field view         "native"|"area"         Which UI the quickfix opens in.
+---@field switch       string                  The key that switches between the two views ("" = none).
 ---@field preview      LvimQfLocPreviewConfig  The floating preview of the entry under the cursor (native view).
 ---@field edit         LvimQfLocEditConfig     The editable quickfix (source line editable; `:w` writes back).
 ---@field context      LvimQfLocContextConfig  Context expand/collapse (source lines around each entry).
@@ -108,8 +109,11 @@ return {
     --              context expand/collapse, and a floating PREVIEW of the entry under the cursor.
     --   "area"   — the lvim-utils AREA: the list + a real-Neovim preview, with fuzzy narrowing, the mark dot,
     --              `<C-q>` → a new list, and the severity filter bar.
-    -- `:LvimQf browse` always opens the area view explicitly, regardless of this.
+    -- `:LvimQf area` (or `float` / `bottom`) opens the browser explicitly, regardless of this.
     view = "native",
+    -- The key that switches the list between the two views, live, in both of them (also `:LvimQf switch`);
+    -- "" = none. The choice holds for the session.
+    switch = "<C-]>",
 
     -- (native view) The floating PREVIEW of the entry under the cursor (qf/preview.lua).
     preview = {

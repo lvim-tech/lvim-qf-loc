@@ -23,13 +23,17 @@ Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
 **Quickfix module**:
 
 - **Preview** — a live float of the entry under the cursor (real file buffer, syntax-highlighted), no FFI / magicwin;
-  `<C-d>` / `<C-u>` scroll it from the list (peek more context)
+  `<C-d>` / `<C-u>` scroll it from the list (peek more context). The search the list came from is marked in it
+  and in the list rows — every match, the entry's own one harder: a grep sent from lvim-picker (`<C-q>`) keeps
+  its pattern in the list, and a `:vimgrep` names it in its title
 - **Editable** — each entry's source line is editable; `:w` writes the changes back to the files, crash-safe
   (writes only when the file still matches; conflict detection; every op guarded). A plain **file list** instead
   edits each row's **path** — `:w` renames / moves the file (creates parent dirs, never overwrites)
 - **Context** — expand / collapse N source lines around each entry (`zo` / `zc`)
 - **Browser** — the list + a real-Neovim preview in the lvim-utils area, with fuzzy narrowing, marking and a
-  severity filter bar (`:LvimQf browse`); the **Browse** tab lists every stored list, pick one to browse it
+  severity filter bar (`:LvimQf area` / `float` / `bottom`); its rows are the editable quickfix's own — the
+  ordinal, the aligned file and `lnum, col` columns and the treesitter-coloured source line, with a grep match
+  marked. The **Browse** tab of `:LvimQf` lists every stored list, pick one to browse it
 - **In-window open keys** — in the editable quickfix, `<CR>` opens the entry in the calling window, `<C-v>` in a
   vertical split, `<C-x>` in a horizontal split, `<C-t>` in a new tab; `g?` shows the keymap cheatsheet
 - **A button band you can step into** — the bar above the list is a real sector, not a legend: `<C-k>` from the
@@ -37,6 +41,8 @@ Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
   return to the list. It sits on the window's winbar row, so it costs the list no line
 - **`:Cfilter` / `:Lfilter`** — Neovim's built-in list filter is `packadd`ed on setup (`config.cfilter`), a
   natural companion for narrowing the quickfix / location list
+- **Switch views live** — `<C-]>` (`config.switch`) in either view, or `:LvimQf switch`, shows the same list in
+  the other one (native ⇄ area); the choice holds for the session
 - **One UI, your choice** — `config.view` (`"native"` or `"area"`) picks which UI the quickfix uses
 
 ## Requirements
@@ -90,6 +96,8 @@ Two commands with tab-completion for subcommands:
 | `browse`      | popup on the **Browse** tab — every stored list; pick one → browse its entries  |
 | `delete`      | popup on the **Delete** tab — remove a stored list                              |
 | `storage`     | popup on the **Storage** tab — save / load all lists to a per-project JSON      |
+| `area` · `float` · `bottom` | open the **browser** on the current list in that layout (also remembered for the session) |
+| `switch`      | show the current list in the other view (native ⇄ area); the view stays for the session |
 
 ### `:LvimLoc [subcommand]`
 
@@ -98,7 +106,9 @@ window that was current when the command ran (`open`/`close`/`next`/`prev` → `
 
 Running either command **without a subcommand** opens the popup on its first tab (**Browse**); **with** a
 subcommand it either runs the action directly (`open`/`close`/`next`/`prev`/`diagnostics`) or opens the popup on
-that tab (`browse`/`delete`/`storage`).
+that tab (`browse`/`delete`/`storage`). A layout word **alone** (`:LvimQf area`) opens the browser on the current
+list in that layout; next to a subcommand it only picks the layout that subcommand's browser uses
+(`:LvimQf diagnostics bottom`).
 
 ### The two views
 
@@ -108,7 +118,8 @@ that tab (`browse`/`delete`/`storage`).
   the files), **context** expand/collapse with `zo` / `zc`, and a floating **preview** of the entry under the
   cursor.
 - **`"area"`** — `:copen` opens the **browser** in the lvim-utils area instead (list + preview, fuzzy, marking,
-  `<C-q>` → a new list, severity filter bar). `:LvimQf browse` opens it explicitly in either view.
+  `<C-q>` → a new list, severity filter bar). `:LvimQf area` (or `float` / `bottom`) opens it explicitly in
+  either view.
 
 In the **native** view's editable window: edit any source line and `:w` to apply; `zo` / `zc` to grow / shrink
 context; `<CR>` / `<C-v>` / `<C-x>` / `<C-t>` open the entry in the calling window / a vertical split / a
@@ -150,8 +161,9 @@ require("lvim-qf-loc").setup({
     cfilter = true,
 
     -- Which UI the quickfix opens in: "native" (editable window + floating preview + context)
-    -- or "area" (the lvim-utils area browser). :LvimQf browse always opens the area explicitly.
+    -- or "area" (the lvim-utils area browser). :LvimQf area|float|bottom opens the browser in either view.
     view = "native",
+    switch = "<C-]>", -- switch the list between the two views, live, in both (also :LvimQf switch); "" = none
 
     -- (native view) the floating preview of the entry under the cursor
     preview = {
