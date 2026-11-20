@@ -248,8 +248,9 @@ function M.update(entry, qwin)
     pcall(function()
         vim.wo[win].number = false -- the statuscolumn below renders the number (with the 󰅂 marker)
         vim.wo[win].relativenumber = false
-        vim.wo[win].cursorline = positioned
-        vim.wo[win].cursorlineopt = "both"
+        -- the entry's line is marked by LINE NUMBER below (marker + highlight), not by the cursor: scrolling the
+        -- preview (<C-d>/<C-u>) moves the cursor, and the marks must stay on the entry
+        vim.wo[win].cursorline = false
         vim.wo[win].signcolumn = "no"
         vim.wo[win].foldenable = false
         vim.wo[win].wrap = false
@@ -258,15 +259,26 @@ function M.update(entry, qwin)
         -- in cursorline (mapped to config.preview.hl) — NOT buffer extmarks, which would leak the 󰅂 sign and the
         -- highlight onto the real file buffer (and hide the line number in a sign-aware statuscolumn). For a
         -- file entry the marker column is blank (no 󰅂).
-        local marker = positioned and "%{% v:relnum == 0 ? '%#LvimQfLocPreviewMarker#󰅂' : ' ' %}" or " "
+        local marker = positioned
+                and ("%{% v:lnum == " .. entry.lnum .. " ? '%#LvimQfLocPreviewMarker#󰅂' : ' ' %}")
+            or " "
         vim.wo[win].statuscolumn = marker .. " %#LineNr#%{v:lnum} "
-        vim.wo[win].winhighlight = "CursorLine:" .. config.preview.hl
     end)
     -- scroll to the entry + centre it, and highlight its line
     local lnum = (entry.lnum and entry.lnum > 0) and entry.lnum or 1
     pcall(api.nvim_win_call, win, function()
         pcall(api.nvim_win_set_cursor, win, { lnum, math.max(0, (entry.col or 1) - 1) })
         vim.cmd("normal! zz")
+    end)
+    -- the entry's line, highlighted by number in this window (a window-local match, never the buffer)
+    pcall(function()
+        if vim.w[win].lvim_qf_line_match then
+            pcall(vim.fn.matchdelete, vim.w[win].lvim_qf_line_match, win)
+            vim.w[win].lvim_qf_line_match = nil
+        end
+        if positioned then
+            vim.w[win].lvim_qf_line_match = vim.fn.matchaddpos(config.preview.hl, { entry.lnum }, 5, -1, { window = win })
+        end
     end)
     -- the search the list came from: every match in the preview, the entry's own one harder; and every match
     -- in the list rows (they are the source lines)

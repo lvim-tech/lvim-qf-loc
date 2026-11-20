@@ -17,6 +17,22 @@ local M = {}
 --- The browser's identity in the dock stack (`opts.key` of the picker it opens through).
 local KEY = "lvim-qf-loc"
 
+local browser_keys -- (defined below, before M.open)
+
+--- The grep a list came from (lvim-picker keeps `{ pattern, regex }` in the list's context), or {}.
+---@param loclist_win integer?
+---@return table
+local function grep_of(loclist_win)
+    local what = loclist_win and vim.fn.getloclist(loclist_win, { context = 0 }) or vim.fn.getqflist({ context = 0 })
+    local c = type(what.context) == "table" and what.context.lvim_picker
+    return type(c) == "table" and c or {}
+end
+
+---@type table?  the open browser's picker handle (`select`, `is_open`)
+local open_handle
+---@type integer?  the window whose location list the open browser shows (nil: the quickfix list)
+local open_loclist
+
 --- The raw list (quickfix or a window's location list) as browser items, drawn as the editable quickfix draws
 --- its rows (qf/edit.lua): ` N │ [icon] file │ lnum, col │ source line` — the ordinal, the aligned filename and
 --- position columns in the same colours, and the source line with its file's treesitter colours. A plain file
@@ -36,12 +52,12 @@ local function build_items(loclist_win)
 
     -- the entries the browser shows: the real ones (context rows, valid = 0, belong to the editable window)
     local entries = {}
-    for _, e in ipairs(raw) do
+    for i, e in ipairs(raw) do
         local path = (e.bufnr and e.bufnr > 0 and vim.api.nvim_buf_is_valid(e.bufnr))
                 and vim.api.nvim_buf_get_name(e.bufnr)
             or ""
         if path ~= "" and (e.valid ~= 0 or not positioned) then
-            entries[#entries + 1] = { e = e, path = path }
+            entries[#entries + 1] = { e = e, path = path, idx = i }
         end
     end
 
@@ -110,7 +126,12 @@ local function build_items(loclist_win)
             end_col = e.end_col,
             type = e.type or "",
             text = table.concat(parts),
+            qf_idx = x.idx, -- its index in the list (]q / [q move the selection to it)
             qf_text = e.text, -- the entry's own text, kept when the rows go back to a quickfix list (`<C-q>`)
+            -- what the row's text after the locator IS, for in-place editing (qf/area_edit.lua): a source line,
+            -- a file path (→ rename), or a description (not editable)
+            qf_edit = files and "path" or (positioned and "line" or nil),
+            qf_entry = e,
             icon = "", -- the columns carry everything (no file icon, as in the editable list)
             hl_spans = spans,
             locator_bytes = locator,
@@ -127,6 +148,14 @@ local function jump(it)
     if not (it and it.path) then
         return
     end
+    -- the list's current entry becomes this one, as `:cc` would make it (so ]q / [q go on from here)
+    if it.qf_idx then
+        if open_loclist and vim.api.nvim_win_is_valid(open_loclist) then
+            pcall(vim.fn.setloclist, open_loclist, {}, "a", { idx = it.qf_idx })
+        else
+            pcall(vim.fn.setqflist, {}, "a", { idx = it.qf_idx })
+        end
+    end
     local buf = vim.fn.bufadd(it.path)
     local ok, err = pcall(vim.fn.bufload, buf)
     if not ok then
@@ -137,6 +166,71 @@ local function jump(it)
     vim.bo[buf].buflisted = true
     pcall(vim.api.nvim_win_set_cursor, 0, { it.lnum or 1, math.max(0, (it.col or 1) - 1) })
     vim.cmd("normal! zz")
+end
+
+--- The browser's own row keys: the view switch, and the list steps (]q / [q / ]l / [l). The steps are bound
+--- HERE, on the list, because a picker panel is key-locked — every unbound printable key is a no-op, so the
+--- global ]q never got past its `]` (and the following `q` then closed the browser). Bound by the panel, the
+--- `]` is its own chord prefix and resolves the second key.
+---@param loclist_win integer?
+---@return table[]
+browser_keys = function(loclist_win)
+    local keys = {}
+    if config.switch and config.switch ~= "" then
+        keys[#keys + 1] = {
+            key = config.switch,
+            name = "native",
+            run = function(_, close)
+                -- AFTER the picker's own row-action handoff: run inside it, the swap's frame was painted by
+                -- that handoff mid-way (a blank screen between the two views)
+                vim.schedule(function()
+                    require("lvim-qf-loc.qf.view").switch(loclist_win, close)
+                end)
+            end,
+        }
+    end
+    -- the newer / older list of the history, from the query and the list alike (Ctrl keys type nothing): the
+    -- browser is rebuilt on it
+    local kind = loclist_win and "loc" or "qf"
+    for _, m in ipairs({ { (config.step or {}).next, 1, "newer" }, { (config.step or {}).prev, -1, "older" } }) do
+        if m[1] and m[1] ~= "" then
+            keys[#keys + 1] = {
+                key = m[1],
+                name = m[3],
+                keep_insert = true,
+                run = function()
+                    require("lvim-qf-loc.qf.view").cycle(kind, m[2], loclist_win)
+                end,
+            }
+        end
+    end
+    -- the rows editable in place, as the native window always is (list only: in the query it is a typed key)
+    local ek = config.browser.edit_key
+    if ek and ek ~= "" then
+        keys[#keys + 1] = {
+            key = ek,
+            name = "edit",
+            mode = "n",
+            run = function()
+                require("lvim-qf-loc.qf.area_edit").open(open_handle, loclist_win)
+            end,
+        }
+    end
+    local jk = config.jump.enabled and config.jump.keys or {}
+    for _, m in ipairs({ { jk.qf_next, "qf", 1 }, { jk.qf_prev, "qf", -1 }, { jk.loc_next, "loc", 1 }, { jk.loc_prev, "loc", -1 } }) do
+        if m[1] and m[1] ~= "" then
+            keys[#keys + 1] = {
+                key = m[1],
+                mode = "n", -- the list only: in the query a `]` is a typed character
+                run = function()
+                    for _ = 1, vim.v.count1 do
+                        require("lvim-qf-loc.qf.jump").step(m[2], m[3])
+                    end
+                end,
+            }
+        end
+    end
+    return keys
 end
 
 --- Open the browser. `loclist_win` = a window handle for that window's location list, or nil for the quickfix
@@ -150,11 +244,10 @@ function M.open(loclist_win, layout)
         return
     end
     local items = build_items(loclist_win)
+    open_loclist = loclist_win
     -- the grep a list came from (lvim-picker keeps it in the list's context): its matches are marked in the
     -- preview too
-    local what = loclist_win and vim.fn.getloclist(loclist_win, { context = 0 }) or vim.fn.getqflist({ context = 0 })
-    local grep = type(what.context) == "table" and type(what.context.lvim_picker) == "table" and what.context.lvim_picker
-        or {}
+    local grep = grep_of(loclist_win)
     if #items == 0 then
         notify("List is empty.", vim.log.levels.INFO)
         return
@@ -184,20 +277,56 @@ function M.open(loclist_win, layout)
         -- No `preview_heights`: the SLOT height of the picker's float/area/bottom dock is centralized by
         -- lvim-utils (`config.dock.geometry`). Passing our own would duplicate it, so we let the picker/surface
         -- derive it — this browser only chooses the layout and the preview SIDE, never the size.
-        keys = (config.switch and config.switch ~= "") and {
-            {
-                key = config.switch,
-                name = "native",
-                run = function(_, close)
-                    require("lvim-qf-loc.qf.view").switch(loclist_win, close)
-                end,
-            },
-        } or nil,
+        keys = browser_keys(loclist_win),
         subtitle = function(it)
             return vim.fn.fnamemodify(it.path, ":t")
         end,
         on_confirm = jump,
+        on_open = function(handle)
+            open_handle = handle
+        end,
     })
+end
+
+--- Whether the browser is open.
+---@return boolean
+function M.is_open()
+    return open_handle ~= nil and open_handle.is_open()
+end
+
+--- Put the cursor on the open browser's list (normal mode).
+function M.focus_list()
+    if open_handle and open_handle.is_open() and open_handle.focus_list then
+        open_handle.focus_list()
+    end
+end
+
+--- Move the open browser's selection to list entry `idx` (after ]q / [q). No-op when it is closed.
+---@param idx integer
+function M.sync(idx)
+    if open_handle and open_handle.is_open() then
+        open_handle.select(function(src)
+            return type(src) == "table" and src.qf_idx == idx
+        end)
+    end
+end
+
+--- Show the CURRENT list in the open browser, in place (after a newer / older list was made current): its rows
+--- and its grep pattern are swapped without closing the browser, so nothing flickers. false when the browser
+--- is not open (the caller opens it instead).
+---@param loclist_win integer?
+---@return boolean
+function M.refresh(loclist_win)
+    if not (open_handle and open_handle.is_open() and open_handle.set_items) then
+        return false
+    end
+    open_loclist = loclist_win
+    local grep = grep_of(loclist_win)
+    open_handle.set_items(build_items(loclist_win), {
+        match_pattern = type(grep.pattern) == "string" and grep.pattern or false,
+        regex = grep.regex == true,
+    })
+    return true
 end
 
 --- Close the browser if it is open (the view switch, run as a command while it shows).

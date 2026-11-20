@@ -59,6 +59,8 @@
 ---@field cfilter      boolean                 `packadd` Neovim's built-in `cfilter` on setup (`:Cfilter`/`:Lfilter`).
 ---@field view         "native"|"area"         Which UI the quickfix opens in.
 ---@field switch       string                  The key that switches between the two views ("" = none).
+---@field step         { next: string, prev: string }  In the list: the newer / older list ("" = none).
+---@field jump         table                   ]q / [q / ]l / [l: `enabled`, `wrap`, `keys`.
 ---@field preview      LvimQfLocPreviewConfig  The floating preview of the entry under the cursor (native view).
 ---@field edit         LvimQfLocEditConfig     The editable quickfix (source line editable; `:w` writes back).
 ---@field context      LvimQfLocContextConfig  Context expand/collapse (source lines around each entry).
@@ -113,7 +115,18 @@ return {
     view = "native",
     -- The key that switches the list between the two views, live, in both of them (also `:LvimQf switch`);
     -- "" = none. The choice holds for the session.
-    switch = "<C-]>",
+    switch = "<C-o>",
+    -- Inside the list (both views): go to the newer / older list of the history and show it there. "" = none.
+    step = { next = "<C-n>", prev = "<C-p>" },
+
+    -- ]q / [q and ]l / [l: Neovim's :cnext / :cprev, made to open the file in an editor window (never in the
+    -- browser's float), to start at the current entry when you are not on it yet, to wrap around at the ends
+    -- (`wrap`), and to move an open browser's selection along.
+    jump = {
+        enabled = true,
+        wrap = true,
+        keys = { qf_next = "]q", qf_prev = "[q", loc_next = "]l", loc_prev = "[l" },
+    },
 
     -- (native view) The floating PREVIEW of the entry under the cursor (qf/preview.lua).
     preview = {
@@ -174,6 +187,10 @@ return {
         -- gone: the two panels then split the dock's rows and neither is readable — the float is the answer when
         -- the preview needs the screen. nil = follow lvim-picker's `preview_side` (one setting for every finder).
         preview_side = nil,
+        -- On the browser's list, the key that makes its rows EDITABLE in place, as the native window always is:
+        -- each row becomes its entry's source line, `:w` writes the changed lines to their files (a file list
+        -- renames / moves the files) and `<Esc>` / `q` go back to the list. "" = no edit key.
+        edit_key = "e",
         -- No `height` here on purpose: the browser opens through the lvim-picker (a 3-layout float/area/bottom
         -- dock consumer), and the SLOT geometry of those layouts is owned centrally by lvim-utils
         -- (`config.dock.geometry`, surfaced by the picker's own `preview_heights`). The browser passes NO size,

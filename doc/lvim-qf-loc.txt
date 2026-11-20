@@ -84,8 +84,24 @@ list always look the same — no two competing UIs.
 `:LvimQf area` (or `float` / `bottom`) opens the browser explicitly in either
 view.
 
-`<C-]>` (`config.switch`) in either view, or `:LvimQf switch`, shows the current
+`<C-o>` (`config.switch`) in either view, or `:LvimQf switch`, shows the current
 list in the other view (native ⇄ area); the choice holds for the session.
+
+`<C-n>` / `<C-p>` (`config.step`) in either view show the newer / older list of
+the history right there.
+
+`e` (`browser.edit_key`) on the browser's list makes its rows editable in place,
+as the native window always is: each row becomes its entry's source line (a file
+list: its path) with the columns as virtual text, `:w` writes the changed lines
+to their files (renames / moves the files), the preview follows the row being
+edited, and `<Esc>` / `q` go back to the list (asking first about unwritten
+edits).
+
+`]q` / `[q` and `]l` / `[l` (`config.jump`) replace Neovim's own: the file opens
+in an editor window (never in the browser's preview float, even with
+`switchbuf=useopen`), the first press goes to the current entry instead of
+skipping it, the list wraps around at its ends (`jump.wrap`, on by default),
+and an open browser's selection follows.
 
 ==============================================================================
 5. EDITABLE QUICKFIX                                   *lvim-qf-loc-editable*
@@ -225,6 +241,7 @@ and the cursor-preview float are content-fit and are NEVER dock consumers.
       browser = {                      -- the area browser (slot height is central, no size here)
           layout = "area",
           preview_side = nil,          -- nil = lvim-picker's; or "right" | "left" | "dynamic"
+          edit_key = "e",              -- edit the rows in place; "" = none
           icons = { E = "󰅚 ", W = "󰀪 ", I = " ", N = " ", H = " ", default = " " },
       },
   })

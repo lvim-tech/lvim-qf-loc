@@ -19,10 +19,36 @@ local function safe_fn(cmd)
     end)
 end
 
---- Open the current quickfix window (`:copen`), or notify when there is no quickfix list.
+--- Make the list stack's CURRENT list a non-empty one: the current list when it has entries, else the first
+--- (oldest) non-empty list of the history. false when every list is empty.
+---@param loc boolean  the current window's location-list stack (else the quickfix stack)
+---@return boolean
+local function current_or_first(loc)
+    local get = loc and function(what)
+        return vim.fn.getloclist(0, what)
+    end or vim.fn.getqflist
+    if (get({ size = 0 }).size or 0) > 0 then
+        return true
+    end
+    for nr = 1, get({ nr = "$" }).nr or 0 do
+        if (get({ nr = nr, size = 0 }).size or 0) > 0 then
+            local cur = get({ nr = 0 }).nr
+            if nr ~= cur then
+                -- step through the history to it (:colder / :cnewer by the distance)
+                local cmd = (nr < cur) and (loc and "lolder" or "colder") or (loc and "lnewer" or "cnewer")
+                safe_fn(("%d%s"):format(math.abs(cur - nr), cmd))
+            end
+            return true
+        end
+    end
+    return false
+end
+
+--- Open the quickfix window (`:copen`) on the current list — or, when that one is empty, on the first non-empty
+--- list of the history; notify when there is none.
 ---@return nil
 M.quick_fix_open = function()
-    if vim.tbl_isempty(vim.fn.getqflist()) then
+    if not current_or_first(false) then
         utils.notify("No quickfix lists available")
     else
         safe_fn("copen")
@@ -77,10 +103,11 @@ M.quick_fix_prev = function()
     safe_fn("copen")
 end
 
---- Open the current window's location-list window (`:lopen`), or notify when there is no location list.
+--- Open the current window's location-list window (`:lopen`) on its current list, or the first non-empty one of
+--- its history; notify when there is none.
 ---@return nil
 M.loc_list_open = function()
-    if vim.tbl_isempty(vim.fn.getloclist(0)) then
+    if not current_or_first(true) then
         utils.notify("No location lists available")
     else
         safe_fn("lopen")

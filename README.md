@@ -41,8 +41,17 @@ Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
   return to the list. It sits on the window's winbar row, so it costs the list no line
 - **`:Cfilter` / `:Lfilter`** — Neovim's built-in list filter is `packadd`ed on setup (`config.cfilter`), a
   natural companion for narrowing the quickfix / location list
-- **Switch views live** — `<C-]>` (`config.switch`) in either view, or `:LvimQf switch`, shows the same list in
+- **`]q` / `[q`, `]l` / `[l` done right** — the file opens in an editor window (never in the browser's
+  preview float, even with `switchbuf=useopen`), the first press goes to the current entry instead of skipping
+  it, the list wraps around at its ends (`jump.wrap`), and an open browser's selection follows
+- **Lists from the list** — `<C-n>` / `<C-p>` (`config.step`) in either view show the newer / older list of the
+  history right there (in the browser they take over the preview-side rotation)
+- **Switch views live** — `<C-o>` (`config.switch`) in either view, or `:LvimQf switch`, shows the same list in
   the other one (native ⇄ area); the choice holds for the session
+- **Edit in the browser too** — `e` (`browser.edit_key`) on the browser's list makes its rows editable in place,
+  as the native window always is: each row becomes its entry's source line (a file list: its path), `:w` writes
+  the changed lines to their files (renames / moves the files), the preview follows the row being edited, and
+  `<Esc>` / `q` go back to the list (asking first about unwritten edits)
 - **One UI, your choice** — `config.view` (`"native"` or `"area"`) picks which UI the quickfix uses
 
 ## Requirements
@@ -163,7 +172,17 @@ require("lvim-qf-loc").setup({
     -- Which UI the quickfix opens in: "native" (editable window + floating preview + context)
     -- or "area" (the lvim-utils area browser). :LvimQf area|float|bottom opens the browser in either view.
     view = "native",
-    switch = "<C-]>", -- switch the list between the two views, live, in both (also :LvimQf switch); "" = none
+    switch = "<C-o>", -- switch the list between the two views, live, in both (also :LvimQf switch); "" = none
+    -- in the list (both views): the newer / older list of the history
+    step = { next = "<C-n>", prev = "<C-p>" },
+
+    -- ]q / [q and ]l / [l (replacing Neovim's own): open in an editor window, start at the current entry,
+    -- wrap around at the ends, move an open browser's selection along
+    jump = {
+        enabled = true,
+        wrap = true,
+        keys = { qf_next = "]q", qf_prev = "[q", loc_next = "]l", loc_prev = "[l" },
+    },
 
     -- (native view) the floating preview of the entry under the cursor
     preview = {
@@ -205,6 +224,7 @@ require("lvim-qf-loc").setup({
     browser = {
         layout = "area", -- "area" | "float" | "bottom"
         preview_side = nil, -- nil = lvim-picker's preview_side; or "right" | "left" | "dynamic" (rotate live with <C-n>/<C-p>)
+        edit_key = "e", -- on the list: edit its rows in place (:w writes, <Esc> / q back); "" = none
         icons = { E = "󰅚 ", W = "󰀪 ", I = " ", N = " ", H = " ", default = " " },
     },
 

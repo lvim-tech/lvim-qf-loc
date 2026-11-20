@@ -49,6 +49,7 @@ M.setup = function(user_config)
     commands.setup()
     autocmds.init()
     edit.setup() -- the editable quickfix (quickfixtextfunc + the FileType qf hook)
+    require("lvim-qf-loc.qf.jump").setup() -- ]q / [q / ]l / [l
     preview.setup() -- the preview footer highlights (themed, survive colorscheme)
 end
 

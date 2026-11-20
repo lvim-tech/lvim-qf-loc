@@ -803,7 +803,7 @@ end
 --- target (skipped), creates the new path's parent dirs, and renames an open buffer to follow.
 ---@param renames table[]  { { old = string, new = string, bufnr = integer? }, ... }
 ---@return integer applied, integer skipped
-local function apply_renames(renames)
+function M.apply_renames(renames)
     local applied, skipped = 0, 0
     for _, r in ipairs(renames) do
         if r.old ~= "" and r.new ~= "" and r.old ~= r.new then
@@ -853,7 +853,7 @@ local function apply(qbuf, loclist_win)
                 end
             end
         end
-        local applied, skipped = apply_renames(renames)
+        local applied, skipped = M.apply_renames(renames)
         vim.bo[qbuf].modified = false
         vim.bo[qbuf].modifiable = true
         decorate(qbuf, loclist_win)
@@ -1061,6 +1061,8 @@ function M.setup_buffer(qbuf)
         end
     end)
     vim.bo[qbuf].modifiable = true
+    -- dim the editor behind the list, as the area browser does (switching views keeps the same dim)
+    pcall(require("lvim-qf-loc.qf.backdrop").attach, api.nvim_get_current_win())
     -- the native qf buffer has no name, so `:w` would E32 before our BufWriteCmd can run — give it one
     pcall(api.nvim_buf_set_name, qbuf, "quickfix-" .. qbuf)
     context.setup_keys(qbuf, loclist_win) -- the context expand/collapse keys
@@ -1083,6 +1085,15 @@ function M.setup_buffer(qbuf)
     map_open(keys.vsplit, "vsplit")
     map_open(keys.split, "split")
     map_open(keys.tab, "tab")
+    -- the newer / older list of the history, shown right here
+    for _, m in ipairs({ { (config.step or {}).next, 1, "newer list" }, { (config.step or {}).prev, -1, "older list" } }) do
+        if m[1] and m[1] ~= "" then
+            vim.keymap.set("n", m[1], function()
+                local loc = (vim.fn.getwininfo(api.nvim_get_current_win())[1] or {}).loclist == 1
+                require("lvim-qf-loc.qf.view").cycle(loc and "loc" or "qf", m[2])
+            end, { buffer = qbuf, nowait = true, silent = true, desc = "lvim-qf-loc: " .. m[3] })
+        end
+    end
     if config.switch and config.switch ~= "" then
         vim.keymap.set("n", config.switch, function()
             local info = vim.fn.getloclist(0, { filewinid = 0 })
@@ -1226,6 +1237,14 @@ function M.setup()
             -- the editable buffer + the floating preview right here.
             if config.view == "area" then
                 local qwin = api.nvim_get_current_win()
+                -- only a quickfix WINDOW being opened (:copen / :lopen) is swapped for the browser: `:colder` /
+                -- `:cnewer` re-set the HIDDEN list buffer and fire FileType too — taking that for an open closed
+                -- whatever window was current and rebuilt the browser on every list change (the flicker)
+                -- (Neovim runs that FileType in a temporary "autocmd" window, so test the window's TYPE)
+                local wt = vim.fn.win_gettype(qwin)
+                if (wt ~= "quickfix" and wt ~= "loclist") or api.nvim_win_get_buf(qwin) ~= args.buf then
+                    return
+                end
                 local info = vim.fn.getloclist(0, { filewinid = 0 })
                 -- For a location list, hand the browser the FILE window that owns it (info.filewinid),
                 -- NOT qwin: qwin is the qf window we close below, and getloclist(<closed win>) is empty —
@@ -1244,6 +1263,27 @@ function M.setup()
             end
         end,
     })
+end
+
+--- Lay the list window out NOW (its columns, its band, the preview of the entry under the cursor) instead of on
+--- the next tick: `setup_buffer` defers them, so a freshly opened list paints RAW for one frame (the bare
+--- source lines) before it gets its columns. The view switch calls this inside its single repaint, so the
+--- native list appears finished. The deferred passes still run and simply redo the same.
+---@param qwin integer  the list window
+function M.render_now(qwin)
+    if not (qwin and api.nvim_win_is_valid(qwin)) then
+        return
+    end
+    local qbuf = api.nvim_win_get_buf(qwin)
+    if vim.bo[qbuf].buftype ~= "quickfix" then
+        return
+    end
+    local info = vim.fn.getwininfo(qwin)[1]
+    local loclist_win = (info and info.loclist == 1) and qwin or nil
+    pcall(decorate, qbuf, loclist_win)
+    if config.preview.enabled then
+        pcall(preview.update, M.entry_at(qbuf, api.nvim_win_get_cursor(qwin)[1]), qwin)
+    end
 end
 
 -- The list's column pieces, shared with the browser (qf/browser.lua) so both draw the same rows.
