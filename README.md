@@ -147,7 +147,7 @@ require("lvim-qf-loc").setup({
     title_pos = "center", -- "left" | "center" | "right"
 
     min_height = 1,
-    max_height = 15,
+    max_height = 15, -- only without lvim-utils: else the native window shows as many entries as the area browser
 
     -- Dock routing for the area BROWSER only (the native quickfix window and the
     -- cursor-preview float are content-fit and never dock consumers):
@@ -187,7 +187,7 @@ require("lvim-qf-loc").setup({
     -- (native view) the floating preview of the entry under the cursor
     preview = {
         enabled = true,
-        max_height = 15,
+        max_height = 15, -- only without lvim-utils: else the browser's peek cap (the area's dynamic preview height)
         -- the title-canon border: a top " " edge only (no ring) that carries the border-title
         border = { "", " ", "", "", "", "", "", "" },
         hl = "Visual", -- the focused line's highlight in the preview

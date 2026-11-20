@@ -28,6 +28,41 @@ local function grep_of(loclist_win)
     return type(c) == "table" and c or {}
 end
 
+--- Rows of the area slot the browser spends on its chrome rather than on entries (title, query, list bar, footer).
+--- Measured from the open browser whenever its list overflows (the picker owns that layout, so it is read, not
+--- assumed); until then, the value measured with the default chrome.
+local chrome = 5
+
+--- The browser's chrome rows in the area slot (see `chrome`) — the native window sizes itself to show as many
+--- entries as the browser does.
+---@return integer
+function M.chrome_rows()
+    return chrome
+end
+
+--- Re-measure `chrome` from the open browser: only an OVERFLOWING list fills its window, so only then does
+--- `slot − visible entries` say how many rows the chrome takes.
+---@param handle table
+---@param layout string
+local function measure_chrome(handle, layout)
+    if layout ~= "area" then
+        return
+    end
+    vim.defer_fn(function()
+        local lw = handle.is_open() and handle.list_win and handle.list_win()
+        local okd, dock = pcall(require, "lvim-utils.dock")
+        if not (lw and okd and type(dock.slot) == "function") then
+            return
+        end
+        local items = handle.visible()
+        local shown = vim.fn.line("w$", lw) - vim.fn.line("w0", lw) + 1
+        local ok, slot = pcall(dock.slot, "area")
+        if ok and slot and #items > shown and slot.height > shown then
+            chrome = slot.height - shown
+        end
+    end, 150)
+end
+
 ---@type table?  the open browser's picker handle (`select`, `is_open`)
 local open_handle
 ---@type integer?  the window whose location list the open browser shows (nil: the quickfix list)
@@ -284,6 +319,7 @@ function M.open(loclist_win, layout)
         on_confirm = jump,
         on_open = function(handle)
             open_handle = handle
+            measure_chrome(handle, layout or config.browser.layout)
         end,
     })
 end

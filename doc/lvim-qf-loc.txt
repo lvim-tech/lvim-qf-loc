@@ -208,7 +208,7 @@ and the cursor-preview float are content-fit and are NEVER dock consumers.
 
       preview = {                      -- (native view) floating preview
           enabled = true,
-          max_height = 15,
+          max_height = 15,             -- without lvim-utils; else the browser's peek cap
           border = { "", " ", "", "", "", "", "", "" },
           hl = "Visual",
           position = "auto",           -- "auto" | "always" | "never"

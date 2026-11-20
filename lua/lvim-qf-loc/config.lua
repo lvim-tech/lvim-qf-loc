@@ -8,7 +8,7 @@
 
 ---@class LvimQfLocPreviewConfig
 ---@field enabled     boolean            Show the floating preview of the entry under the cursor (native view).
----@field max_height  integer            Cap for the preview float's height in rows.
+---@field max_height  integer            Cap for the preview float's height in rows without lvim-utils; with it, the browser's peek cap (dock area `height_peek`).
 ---@field border      string|string[]    The preview float's border — the title-canon top " " edge that carries the border-title.
 ---@field hl          string             Highlight group for the focused entry's line inside the preview.
 ---@field position    "auto"|"always"|"never"  When the title shows `line N │ col M` after the filename.
@@ -55,7 +55,7 @@
 ---@field title_pos    "left"|"center"|"right" Border-title alignment for the browser + the management popup — every layout the same.
 ---@field dock         LvimQfLocDock           Dock routing for the area BROWSER: managed-stack membership + per-layout geometry overrides.
 ---@field min_height   integer                 Minimum quickfix window height (rows).
----@field max_height   integer                 Maximum quickfix window height (rows).
+---@field max_height   integer                 Maximum quickfix window height (rows) without lvim-utils; with it, it shows as many entries as the area browser.
 ---@field cfilter      boolean                 `packadd` Neovim's built-in `cfilter` on setup (`:Cfilter`/`:Lfilter`).
 ---@field view         "native"|"area"         Which UI the quickfix opens in.
 ---@field switch       string                  The key that switches between the two views ("" = none).
@@ -77,6 +77,8 @@ return {
     -- ("Quickfix" / "Location List"), so only the alignment lives in the config.
     title_pos = "center",
     min_height = 1,
+    -- the native window shows as many entries as the area browser (lvim-utils `dock.slot("area")` less the
+    -- browser's chrome); this cap applies only without lvim-utils
     max_height = 15,
 
     -- DOCK routing for the area BROWSER (qf/browser.lua, opened through the lvim-picker). Applies ONLY to that
@@ -131,7 +133,7 @@ return {
     -- (native view) The floating PREVIEW of the entry under the cursor (qf/preview.lua).
     preview = {
         enabled = true,
-        max_height = 15,
+        max_height = 15, -- only without lvim-utils: else the browser's peek cap (dock area `height_peek`)
         -- The title-canon border: a top " " edge ONLY (no ring), which CARRIES the centered `file │ line │ col`
         -- native border-title — the borderless `config.ui.border = "none"` has no top edge, so a titled float
         -- needs its own. Resolved (corners filled) by lvim-ui.util; matches the help-window canon.

@@ -132,11 +132,27 @@ function M.scroll(delta)
     end)
 end
 
+--- The preview's height cap: the area browser's PEEK cap (lvim-utils `dock.geometry.area.height_peek`, else its
+--- `height` — the Control Center's "Area dynamic preview height"), so the native preview and the browser's peek are
+--- the same height under the same settings; a value ≤ 1 is a fraction of the screen. Without lvim-utils:
+--- `config.preview.max_height`.
+---@return integer
+local function height_cap()
+    local ok, uconf = pcall(require, "lvim-utils.config")
+    local g = ok and type(uconf) == "table" and uconf.dock and uconf.dock.geometry and uconf.dock.geometry.area
+    local frac = type(g) == "table" and (g.height_peek or g.height) or nil
+    if type(frac) == "number" and frac > 0 then
+        return math.max(3, frac <= 1 and math.floor(vim.o.lines * frac) or math.floor(frac))
+    end
+    return config.preview.max_height
+end
+
 --- The geometry for the float: full width of the quickfix window, stacked just ABOVE it, using whatever
 --- height is free between the top of the screen and the quickfix window. nil when there isn't room.
 ---@param qwin integer
+---@param want integer?  the rows the content needs (a short file shrinks the float, as the browser's peek does)
 ---@return table? config  an nvim_open_win config
-local function geometry(qwin)
+local function geometry(qwin, want)
     if not api.nvim_win_is_valid(qwin) then
         return nil
     end
@@ -160,11 +176,15 @@ local function geometry(qwin)
     local above = (qrow - 1) - brows
     local below = (screen_bottom - (qrow + qheight + 1)) - brows
     local height, row
+    local cap = height_cap()
+    if want then
+        cap = math.min(cap, math.max(3, want))
+    end
     if below >= above then
-        height = math.min(config.preview.max_height, below)
+        height = math.min(cap, below)
         row = qrow + qheight + 1 -- directly below the qf statusline; nvim adds the float's own (title) border
     else
-        height = math.min(config.preview.max_height, above)
+        height = math.min(cap, above)
         row = qrow - height - brows -- content + border sits directly above the qf window (no extra gap)
     end
     if height < 3 then
@@ -192,13 +212,6 @@ function M.update(entry, qwin)
         M.close()
         return
     end
-    local geo = geometry(qwin)
-    if not geo then
-        M.close()
-        return
-    end
-    geo.title = title_chunks(entry) -- the centered `file │ line N │ col M` box, on the TOP border
-    geo.title_pos = "center"
     -- the buffer to show: the entry's real file (full syntax, live), else a scratch with the entry text
     local buf
     if
@@ -231,6 +244,14 @@ function M.update(entry, qwin)
         pcall(api.nvim_buf_set_lines, buf, 0, -1, false, { entry.text or "" })
     end
 
+    -- sized once the buffer is known: its lines + the winbar's air row, under the cap
+    local geo = geometry(qwin, api.nvim_buf_line_count(buf) + 1)
+    if not geo then
+        M.close()
+        return
+    end
+    geo.title = title_chunks(entry) -- the centered `file │ line N │ col M` box, on the TOP border
+    geo.title_pos = "center"
     if win and api.nvim_win_is_valid(win) then
         pcall(api.nvim_win_set_config, win, geo)
         pcall(api.nvim_win_set_buf, win, buf)
@@ -281,11 +302,13 @@ function M.update(entry, qwin)
         end
     end)
     -- the search the list came from: every match in the preview, the entry's own one harder; and every match
-    -- in the list rows (they are the source lines)
+    -- in the list rows (they are the source lines; buffer marks — see `mark_list`)
     local matches = require("lvim-qf-loc.qf.matches")
     local pattern = matches.pattern(qwin)
     matches.mark(win, pattern, positioned and buf == entry.bufnr and entry or nil)
-    matches.mark(qwin, pattern)
+    local info = vim.fn.getwininfo(qwin)[1]
+    local list = (info and info.loclist == 1) and vim.fn.getloclist(qwin, { items = 0 }) or vim.fn.getqflist({ items = 0 })
+    matches.mark_list(api.nvim_win_get_buf(qwin), pattern, list.items)
 end
 
 return M

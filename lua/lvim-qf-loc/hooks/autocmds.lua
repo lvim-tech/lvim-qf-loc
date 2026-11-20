@@ -12,18 +12,42 @@ local diagnostics = require("lvim-qf-loc.core.diagnostics")
 
 local M = {}
 
---- Size the quickfix window to fit its content, clamped to `[minheight, maxheight]`. The native editable view
---- adds a top winbar that eats one row, so reserve it — otherwise the last entry falls below the fold even
---- though the height was meant to fit them all.
----@param minheight integer
----@param maxheight integer
----@return nil
-local function qf_height(minheight, maxheight)
-    local height = math.max(math.min(vim.fn.line("$"), maxheight), minheight)
-    if config.view == "native" and config.edit.enabled then
-        height = height + 1
+--- The quickfix window's height cap, and whether it fits its content under it — so the native window shows as
+--- many ENTRIES as the area browser does under the same settings (the Control Center's "Area height" / "Area
+--- height auto"). The browser fills the AREA slot of the central dock geometry (lvim-utils `dock.slot("area")`),
+--- but spends rows of it on its chrome (title, query, list bar, footer — `browser.chrome_rows()`); the native
+--- window's only chrome is its button band. So the cap is the slot less the browser's chrome, plus the band.
+--- Without lvim-utils: `config.max_height`, fitted.
+---@return integer cap, boolean fit
+local function height_cap()
+    local ok, dock = pcall(require, "lvim-utils.dock")
+    if ok and type(dock.slot) == "function" then
+        local ok_s, slot = pcall(dock.slot, "area")
+        if ok_s and type(slot) == "table" and (slot.height or 0) > 0 then
+            local band = (config.view == "native" and config.edit.enabled) and 1 or 0
+            local rows = slot.height - require("lvim-qf-loc.qf.browser").chrome_rows()
+            return math.max(1, rows) + band, slot.height_auto ~= false
+        end
     end
-    vim.cmd(height .. "wincmd _")
+    return config.max_height, true
+end
+
+--- Size the quickfix window: its content (plus the native editable view's top winbar row, which would
+--- otherwise push the last entry below the fold), clamped to `[minheight, cap]`, or the whole cap when the
+--- geometry does not fit to content.
+---@param minheight integer
+---@return nil
+local function qf_height(minheight)
+    local cap, fit = height_cap()
+    local height = cap
+    if fit then
+        height = vim.fn.line("$")
+        if config.view == "native" and config.edit.enabled then
+            height = height + 1
+        end
+        height = math.min(height, cap)
+    end
+    vim.cmd(math.max(height, minheight) .. "wincmd _")
 end
 
 --- Register the plugin's autocommands. Idempotent: the augroup is (re)created with `clear = true` on every
@@ -54,7 +78,7 @@ M.init = function()
     vim.api.nvim_create_autocmd("FileType", {
         pattern = "qf",
         callback = function()
-            qf_height(config.min_height, config.max_height)
+            qf_height(config.min_height)
         end,
         group = group,
     })

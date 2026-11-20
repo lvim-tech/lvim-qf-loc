@@ -80,6 +80,55 @@ function M.mark(win, pattern, focus)
     vim.w[win].lvim_qf_matches = ids
 end
 
+local NS = vim.api.nvim_create_namespace("lvim-qf-loc-list-match")
+
+--- Mark the matches in the LIST buffer `buf` (the native quickfix buffer — the plugin's own, so a buffer mark
+--- leaks nowhere): each entry's OWN match (`col`..`end_col` on its line — what a grep found, the browser marks
+--- the same span; a row's text is its source line, so the columns map 1:1), and every match of `pattern` (the
+--- search the list came from, when it is known). Extmarks over the rows' syntax, not a `matchadd`: the rows
+--- carry their source's treesitter colours as extmarks. Re-run to refresh; nil/empty input only clears.
+---@param buf integer
+---@param pattern string?
+---@param items table[]?  the list's entries, in row order
+function M.mark_list(buf, pattern, items)
+    if not vim.api.nvim_buf_is_valid(buf) then
+        return
+    end
+    vim.api.nvim_buf_clear_namespace(buf, NS, 0, -1)
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    local function put(row, c0, c1)
+        pcall(vim.api.nvim_buf_set_extmark, buf, NS, row, c0, {
+            end_col = c1,
+            hl_group = "LvimQfLocMatch",
+            priority = 200, -- over the rows' syntax (90)
+        })
+    end
+    for i, e in ipairs(items or {}) do
+        local line = lines[i]
+        local c0, c1 = (e.col or 0) - 1, (e.end_col or 0) - 1
+        if line and e.valid ~= 0 and c0 >= 0 and c1 > c0 and c1 <= #line and ((e.end_lnum or 0) <= e.lnum) then
+            put(i - 1, c0, c1)
+        end
+    end
+    local ok, re = pcall(vim.regex, pattern or "")
+    if not (ok and re and pattern and pattern ~= "") then
+        return
+    end
+    for i, line in ipairs(lines) do
+        local from = 0
+        while from < #line do
+            local s0, e0 = re:match_str(line:sub(from + 1))
+            if not s0 then
+                break
+            end
+            if e0 > s0 then
+                put(i - 1, from + s0, from + e0)
+            end
+            from = from + math.max(e0, s0 + 1)
+        end
+    end
+end
+
 --- The match colours: the lvim-ui ones (the same as a grep in the picker), plain fallbacks without it.
 function M.define_highlights()
     local ui = not vim.tbl_isempty(vim.api.nvim_get_hl(0, { name = "LvimUiMsgAreaMatch" }))
