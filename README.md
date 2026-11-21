@@ -6,7 +6,7 @@ quickfix that writes back to your files, **context** expand/collapse, and a **br
 in the lvim-utils area. Self-contained and crash-safe by design: no FFI, no scroll
 math against the window's internal state, no delimiter parsing of the rendered line.
 Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
-[lvim-picker](https://github.com/lvim-tech/lvim-picker) (optional, falls back gracefully).
+[lvim-picker](https://github.com/lvim-tech/lvim-fuzzy-picker) (optional, falls back gracefully).
 
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://github.com/lvim-tech/lvim-qf-loc/blob/main/LICENSE)
 
@@ -58,7 +58,7 @@ Powered by [lvim-ui](https://github.com/lvim-tech/lvim-ui) and
 
 - Neovim 0.12+
 - [lvim-ui](https://github.com/lvim-tech/lvim-ui) _(optional — enables the tabbed management popup)_
-- [lvim-picker](https://github.com/lvim-tech/lvim-picker) _(optional — enables the area view and the browser)_
+- [lvim-picker](https://github.com/lvim-tech/lvim-fuzzy-picker) _(optional — enables the area view and the browser)_
 
 > This plugin owns `quickfixtextfunc` and the quickfix window, so any other plugin that also
 > claims them will conflict — keep only one. Run `:checkhealth lvim-qf-loc` to verify.
@@ -82,7 +82,7 @@ lvim-installer installs plugins through Neovim's built-in `vim.pack`, so no exte
 ```lua
 vim.pack.add({
     { src = "https://github.com/lvim-tech/lvim-ui" },
-    { src = "https://github.com/lvim-tech/lvim-picker" },
+    { src = "https://github.com/lvim-tech/lvim-fuzzy-picker" },
     { src = "https://github.com/lvim-tech/lvim-qf-loc" },
 })
 require("lvim-qf-loc").setup({})
